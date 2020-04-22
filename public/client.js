@@ -621,16 +621,9 @@ function newGame() {
 
                 //if it's me///////////
                 if (socket.id == p.id) {
-                    rolledSprite = null;
-
-                    //the location appears in the url
-                    if (ROOM_LINK && ROOMS[p.room] != null)
-                        window.history.replaceState(null, null, "?room=" + p.room);
-
                     players = {};
-                    bubbles = [];
 
-                    deleteAllSprites();
+                    // deleteAllSprites();
 
                     players[p.id] = me = new Player(p);
 
@@ -640,97 +633,9 @@ function newGame() {
                     me.sprite.onMouseOut = function () { };
                     */
 
-                    //click on me = emote
+                    //click on me = pulse?
                     me.sprite.onMousePressed = function () { socket.emit('emote', { room: me.room, em: true }); };
                     me.sprite.onMouseReleased = function () { socket.emit('emote', { room: me.room, em: false }); };
-
-                    room = p.room;
-
-                    //if a page background is specified change it
-                    if (ROOMS[p.room].pageBg != null)
-                        document.body.style.backgroundColor = ROOMS[p.room].pageBg;
-                    else
-                        document.body.style.backgroundColor = PAGE_COLOR;
-
-                    //load level background
-
-                    if (ROOMS[p.room].bgGraphics != null) {
-                        //can be static or spreadsheet
-                        var bgg = ROOMS[p.room].bgGraphics;
-
-                        //find frame number
-                        var f = 1;
-                        if (ROOMS[p.room].frames != null)
-                            f = ROOMS[p.room].frames;
-
-                        var ss = loadSpriteSheet(bgg, WIDTH, HEIGHT, f);
-                        bg = loadAnimation(ss);
-
-                        if (ROOMS[p.room].frameDelay != null) {
-                            bg.frameDelay = ROOMS[p.room].frameDelay;
-                        }
-                    }
-
-                    if (ROOMS[p.room].avatarScale == null)
-                        ROOMS[p.room].avatarScale = 2;
-
-                    areas = ROOMS[p.room].areaGraphics;
-                    if (areas == null)
-                        print("ERROR: no area assigned to  " + p.room);
-
-                    //create sprites
-                    if (ROOMS[p.room].sprites != null)
-                        for (var i = 0; i < ROOMS[p.room].sprites.length; i++) {
-                            var sprite = ROOMS[p.room].sprites[i];
-
-                            var f = 1;
-
-                            if (sprite.frames != null)
-                                f = sprite.frames;
-
-                            var sw = floor(sprite.spriteGraphics.width / f);
-                            var sh = sprite.spriteGraphics.height;
-
-                            var ss = loadSpriteSheet(sprite.spriteGraphics, sw, sh, f);
-                            var animation = loadAnimation(ss);
-
-                            if (sprite.frameDelay != null)
-                                animation.frameDelay = sprite.frameDelay;
-
-
-                            //the position is the bottom left
-                            var newSprite = createSprite(sprite.position[0] * ASSET_SCALE + floor(sw / 2), sprite.position[1] * ASSET_SCALE + floor(sh / 2));
-                            newSprite.addAnimation("default", animation);
-
-                            //if label make it rollover reactive
-                            newSprite.label = sprite.label;
-                            if (sprite.label != null) {
-
-                                newSprite.onMouseOver = function () {
-                                    rolledSprite = this;
-                                };
-
-                                newSprite.onMouseOut = function () {
-                                    if (rolledSprite == this)
-                                        rolledSprite = null;
-                                };
-                            }
-                            //if command, make it interactive like an area
-                            if (sprite.command != null) {
-                                newSprite.command = sprite.command;
-
-                                newSprite.onMouseReleased = function () {
-                                    if (rolledSprite == this)
-                                        moveToCommand(this.command);
-                                };
-                            }
-
-                        }
-
-                    //initialize the mod if any
-                    if (window.initMod != null) {
-                        window.initMod(p.id, p.room);
-                    }
 
                 }//it me
                 else {
@@ -751,23 +656,6 @@ function newGame() {
                         destinationX: me.destinationX,
                         destinationY: me.destinationY
                     });
-                }
-
-                if (p.new && p.nickName != "" && firstLog) {
-                    var spark = createSprite(p.x, p.y - AVATAR_H + 1);
-                    spark.addAnimation("spark", appearEffect);
-                    spark.scale = ASSET_SCALE;
-                    spark.life = 60;
-                    if (SOUND)
-                        appearSound.play();
-
-                    if (p.id == me.id) {
-                        longText = SETTINGS.INTRO_TEXT;
-                        longTextLines = 1;
-                        longTextAlign = "center";//or center
-                    }
-
-                    firstLog = false;
                 }
 
                 console.log("There are now " + Object.keys(players).length + " players in this room");
@@ -1493,65 +1381,15 @@ function Player(p) {
     this.id = p.id;
     this.nickName = p.nickName;
     this.color = p.color;
-    this.avatar = p.avatar;
-    this.ignore = false;
 
-    this.tint = color("#FFFFFF");
-
-    if (ROOMS[p.room].tint != null) {
-        this.tint = color(ROOMS[p.room].tint);
-    }
-
-    //tint the image
-    this.avatarGraphics = paletteSwap(walkSheets[p.avatar], AVATAR_PALETTES_RGB[p.color], this.tint);
-    this.spriteSheet = loadSpriteSheet(this.avatarGraphics, AVATAR_W, AVATAR_H, round(walkSheets[p.avatar].width / AVATAR_W));
-    this.walkAnimation = loadAnimation(this.spriteSheet);
-    //emote
-    this.emoteGraphics = paletteSwap(emoteSheets[p.avatar], AVATAR_PALETTES_RGB[p.color], this.tint);
-    this.emoteSheet = loadSpriteSheet(this.emoteGraphics, AVATAR_W, AVATAR_H, round(emoteSheets[p.avatar].width / AVATAR_W));
-    this.emoteAnimation = loadAnimation(this.emoteSheet);
-    this.emoteAnimation.frameDelay = 10;
-
-    this.sprite = createSprite(100, 100);
-
-    this.sprite.scale = ROOMS[p.room].avatarScale;
-
-    this.sprite.addAnimation('walk', this.walkAnimation);
-    this.sprite.addAnimation('emote', this.emoteAnimation);
-
-
-    if (this.nickName == "")
-        this.sprite.mouseActive = false;
-    else
-        this.sprite.mouseActive = true;
-
-    //this.sprite.debug = true;
-
-    //no parent in js? WHAAAAT?
-    this.sprite.id = this.id;
-    this.sprite.label = p.nickName;
-    this.sprite.transparent = false;
-    this.sprite.roomId = p.room; //sure anything goes
-
-    //save the dominant color for bubbles and rollover label
-    var c = color(AVATAR_PALETTES[p.color][2]);
-
-    if (brightness(c) > 30)
-        this.sprite.labelColor = color(AVATAR_PALETTES[p.color][2]);
-    else
-        this.sprite.labelColor = color(AVATAR_PALETTES[p.color][3]);
-
-    this.room = p.room;
     this.x = p.x;
     this.y = p.y;
-    this.dir = 1;
-    this.destinationX = p.destinationX;
-    this.destinationY = p.destinationY;
 
     //lurkmode
     if (this.nickName == "")
         this.sprite.visible = false;
 
+    /* kept as example for syncing animation/visuals
     this.stopWalkingAnimation = function () {
 
         if (this.sprite.getAnimationLabel() == "walk") {
@@ -1560,17 +1398,17 @@ function Player(p) {
             this.sprite.animation.stop();
         }
     }
-
     this.playWalkingAnimation = function () {
         this.sprite.changeAnimation("walk");
         this.sprite.animation.play();
     }
-
     this.updatePosition = function () {
         this.sprite.position.x = round(this.x);
         this.sprite.position.y = round(this.y - AVATAR_H / 2 * this.sprite.scale);
     }
+    */
 
+    // unless lurmode
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
             rolledSprite = this;
@@ -1585,28 +1423,6 @@ function Player(p) {
 
         };
     }
-    //ugly as fuck but javascript made me do it
-    this.sprite.originalDraw = this.sprite.draw;
-
-    this.sprite.draw = function () {
-
-        if (!this.ignore) {
-            if (this.transparent)
-                tint(255, 100);
-
-            if (window[this.roomId + "DrawSprite"] != null) {
-                window[this.roomId + "DrawSprite"](this.id, this, this.originalDraw);
-            }
-            else {
-                this.originalDraw();
-            }
-
-            if (this.transparent)
-                noTint();
-        }
-    }
-
-    this.stopWalkingAnimation();
 }
 
 
