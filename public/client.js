@@ -925,44 +925,22 @@ function update() {
         //iterate through the players
         for (var playerId in players) {
             if (players.hasOwnProperty(playerId)) {
-
                 var p = players[playerId];
-
-                var prevX, prevY;
 
                 //make sure the coordinates are non null since I may have created a player
                 //but I may still be waiting for the first update
                 if (p.x != null && p.y != null) {
-                    //save in case of undo
-                    prevX = p.x;
-                    prevY = p.y;
-
-                    //position and destination are different, move
-                    if (p.x != p.destinationX || p.y != p.destinationY) {
-                    }
-                    else {
-
-                        p.stopWalkingAnimation();
-                    }
-
+		    // e.g. update screen position based off camera movement
 
                     p.updateDrawPosition();
-
                 }
 
             }
         }//player update cycle
 
+        // drawSprites();
 
-        //set the existing sprites' depths in relation to their position
-        for (var i = 0; i < allSprites.length; i++) {
-            //sprites on the bottom will be drawn first
-            allSprites[i].depth = allSprites[i].position.y + allSprites[i].height / 2;
-
-        }
-
-        //
-        drawSprites();
+        // TODO: this is where we draw circles
 
 
         //GUI
@@ -1240,7 +1218,7 @@ function Player(p) {
         this.sprite.visible = false;
 
     // kept as example for syncing animation/visuals
-    this.updatePosition = function () {
+    this.updateDrawPosition = function () {
 	this.screenX = x; // * cameraTransform etc.
 	this.screenY = y; // * cameraTransform etc.
     }
