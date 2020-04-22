@@ -581,19 +581,7 @@ function newGame() {
 
             //first time
             if (me == null) {
-                //join offscreen if missing parameters?
-                var sx = -100;
-                var sy = -100;
-
-                if (ROOMS[SETTINGS.defaultRoom].spawn == null) {
-                    console.log("WARNING: " + SETTINGS.defaultRoom + " has no spawn area");
-                }
-                else {
-                    spawnZone = ROOMS[SETTINGS.defaultRoom].spawn;
-                    //randomize position if it's the first time
-                    var sx = round(random(spawnZone[0] * ASSET_SCALE, spawnZone[2] * ASSET_SCALE));
-                    var sy = round(random(spawnZone[1] * ASSET_SCALE, spawnZone[3] * ASSET_SCALE));
-                }
+		// TODO: this is where x, y and color is assigned!
 
                 //send the server my name and avatar
                 socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: SETTINGS.defaultRoom, x: sx, y: sy });
