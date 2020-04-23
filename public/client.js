@@ -581,7 +581,19 @@ function newGame() {
 
             //first time
             if (me == null) {
-		// TODO: this is where x, y and color is assigned!
+                //join offscreen if missing parameters?
+                var sx = -100;
+                var sy = -100;
+
+                if (ROOMS[SETTINGS.defaultRoom].spawn == null) {
+                    console.log("WARNING: " + SETTINGS.defaultRoom + " has no spawn area");
+                }
+                else {
+                    spawnZone = ROOMS[SETTINGS.defaultRoom].spawn;
+                    //randomize position if it's the first time
+                    var sx = round(random(spawnZone[0] * ASSET_SCALE, spawnZone[2] * ASSET_SCALE));
+                    var sy = round(random(spawnZone[1] * ASSET_SCALE, spawnZone[3] * ASSET_SCALE));
+                }
 
                 //send the server my name and avatar
                 socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: SETTINGS.defaultRoom, x: sx, y: sy });
@@ -918,29 +930,192 @@ function update() {
     }
     else if (screen == "game") {
 
-        background('black')
+        //calling a custom function
+        if (window[room + "Update"] != null) {
+            window[room + "Update"]();
+        }
+
+        //draw a background
+        background(UI_BG);
+        imageMode(CORNER);
+
+        if (bg != null) {
+            animation(bg, floor(WIDTH / 2), floor(HEIGHT / 2));
+        }
 
         textFont(font, FONT_SIZE);
 
         //iterate through the players
         for (var playerId in players) {
             if (players.hasOwnProperty(playerId)) {
+
                 var p = players[playerId];
+
+                var prevX, prevY;
 
                 //make sure the coordinates are non null since I may have created a player
                 //but I may still be waiting for the first update
                 if (p.x != null && p.y != null) {
-		    // e.g. update screen position based off camera movement
+                    //save in case of undo
+                    prevX = p.x;
+                    prevY = p.y;
 
-                    p.updateDrawPosition();
+                    //position and destination are different, move
+                    if (p.x != p.destinationX || p.y != p.destinationY) {
+
+                        //a series of vector operations to move toward a point at a linear speed
+
+                        // create vectors for position and dest.
+                        var destination = createVector(p.destinationX, p.destinationY);
+                        var position = createVector(p.x, p.y);
+
+                        // Calculate the distance between your destination and position
+                        var distance = destination.dist(position);
+
+                        // this is where you actually calculate the direction
+                        // of your target towards your rect. subtraction dx-px, dy-py.
+                        var delta = destination.sub(position);
+
+                        // then you're going to normalize that value
+                        // (normalize sets the length of the vector to 1)
+                        delta.normalize();
+
+                        // then you can multiply that vector by the desired speed
+                        var increment = delta.mult(SPEED * deltaTime / 1000);
+
+                        /*
+                        IMPORTANT
+                        deltaTime The system variable deltaTime contains the time difference between 
+                        the beginning of the previous frame and the beginning of the current frame in milliseconds.
+                        the speed is not based on the client framerate which can be variable but on the actual time that passes
+                        between frames.
+                        */
+
+                        //increment the position
+                        position.add(increment);
+
+                        //calculate new distance
+                        var newDistance = position.dist(createVector(p.destinationX, p.destinationY));
+
+                        //if I got farther than I was originally, I overshot so set position to destination
+                        if (newDistance > distance) {
+
+                            p.x = p.destinationX;
+                            p.y = p.destinationY;
+                            p.stopWalkingAnimation();
+
+                        }
+                        else {
+                            //this system is not pathfinding but it makes characters walk "around" corners instead of getting stuck
+
+                            //test new position for obstacle repeat for both sides
+                            var obs = isObstacle(position.x - AVATAR_W / 2, position.y, p.room, areas);
+                            var obs2 = isObstacle(position.x + AVATAR_W / 2, position.y, p.room, areas);
+
+                            if (!obs && !obs2) {
+                                p.x = position.x;
+                                p.y = position.y;
+                                p.playWalkingAnimation();
+                            }
+                            //if obstacle test only x movement
+                            else {
+
+                                var obsX = isObstacle(position.x - AVATAR_W / 2, p.y, p.room, areas);
+                                var obsX2 = isObstacle(position.x + AVATAR_W / 2, p.y, p.room, areas);
+
+                                //if not obstacle move only horizontally at full speed
+                                if (!obsX && !obsX2 && abs(delta.x) > 0.1) {
+
+                                    p.x += SPEED * deltaTime / 1000 * (p.x > position.x) ? -1 : 1;
+                                    p.playWalkingAnimation();
+
+                                }
+                                else {
+                                    //if obs on y test the y
+                                    var obsY = isObstacle(p.x - AVATAR_W / 2, position.y, p.room, areas);
+                                    var obsY2 = isObstacle(p.x + AVATAR_W / 2, position.y, p.room, areas);
+
+                                    if (!obsY && !obsY2 && abs(delta.y) > 0.1) {
+
+                                        p.y += SPEED * deltaTime / 1000 * (p.y > position.y) ? -1 : 1;
+                                        p.playWalkingAnimation();
+
+                                    }
+                                    else {
+                                        //if not complete block
+                                        p.destinationX = p.x;
+                                        p.destinationY = p.y;
+                                        p.stopWalkingAnimation();
+                                        //cancel command if me
+                                        if (p == me) {
+                                            nextCommand = null;
+
+                                            //stop if moving
+                                            socket.emit('move', { x: me.x, y: me.y, room: me.room, destinationX: me.x, destinationY: me.y });
+                                        }
+                                    }
+
+                                }
+                            }
+
+                            //change dir
+                            if (prevX != p.x) {
+                                p.dir = (prevX > p.x) ? -1 : 1;
+                                p.sprite.mirrorX(p.dir);
+                            }
+                        }
+
+                    }
+                    else {
+
+                        p.stopWalkingAnimation();
+                    }
+
+                    //The clients should never take a player to an illegal place (transparent area pixels or non walkable areas)
+                    //but occasionally a dude will open the developer console and change the coordinates to make his avatar fly around
+                    //Good for him! Let him have fun in his own little client! 
+                    //All the others players will just stop displaying and hearing him
+                    //because I really don't want to enforce this on the server side
+                    var illegal = isObstacle(p.x, p.y, p.room, areas);
+                    if (illegal) {
+                        //print(">>>>>>>>>>>" + p.id + " is in an illegal position<<<<<<<<<<<<<<<");
+                        p.ignore = true;
+                        if (p.sprite != null)
+                            p.sprite.ignore = true;
+                    }
+                    else {
+                        p.ignore = false;
+                        if (p.sprite != null)
+                            p.sprite.ignore = false;
+                    }
+
+                    //////this part is only triggered by ME
+                    if (p == me) {
+                        //reached destination, execute action
+                        if (me.x == me.destinationX && me.y == me.destinationY && nextCommand != null) {
+                            executeCommand(nextCommand);
+                            nextCommand = null;
+                        }
+
+                    }
+
+                    p.updatePosition();
+
                 }
 
             }
         }//player update cycle
 
-        // drawSprites();
 
-        // TODO: this is where we draw circles
+        //set the existing sprites' depths in relation to their position
+        for (var i = 0; i < allSprites.length; i++) {
+            //sprites on the bottom will be drawn first
+            allSprites[i].depth = allSprites[i].position.y + allSprites[i].height / 2;
+
+        }
+
+        //
+        drawSprites();
 
 
         //GUI
@@ -1207,21 +1382,31 @@ function Player(p) {
     this.nickName = p.nickName;
     this.color = p.color;
 
-    // where am i, in and endless void centered on (0, 0)?
     this.x = p.x;
     this.y = p.y;
-    this.screenX = this.x;
-    this.screenY = this.y;
 
     //lurkmode
     if (this.nickName == "")
         this.sprite.visible = false;
 
-    // kept as example for syncing animation/visuals
-    this.updateDrawPosition = function () {
-	this.screenX = x; // * cameraTransform etc.
-	this.screenY = y; // * cameraTransform etc.
+    /* kept as example for syncing animation/visuals
+    this.stopWalkingAnimation = function () {
+
+        if (this.sprite.getAnimationLabel() == "walk") {
+            this.sprite.changeAnimation("emote");
+            this.sprite.animation.changeFrame(0);
+            this.sprite.animation.stop();
+        }
     }
+    this.playWalkingAnimation = function () {
+        this.sprite.changeAnimation("walk");
+        this.sprite.animation.play();
+    }
+    this.updatePosition = function () {
+        this.sprite.position.x = round(this.x);
+        this.sprite.position.y = round(this.y - AVATAR_H / 2 * this.sprite.scale);
+    }
+    */
 
     // unless lurmode
     if (this.nickName != "") {
