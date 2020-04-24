@@ -594,17 +594,18 @@ function newGame() {
 
             //first time
             if (me == null) {
-		// PLAYER INIT
+		// PLAYER INIT init
 		var sx = random(0, WIDTH);
 		var sy = random(0, HEIGHT);
 
-		console.log('sx = ' + sx);
-		console.log('sy = ' + sy);
+		currentColor = '#0000ff';
 
                 //send the server my name and avatar
                 socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: SETTINGS.defaultRoom, x: sx, y: sy });
             }
             else {
+
+		currentColor = '#0000ff';
                 socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: me.room, x: me.x, y: me.y });
             }
         } catch (e) {
@@ -1348,33 +1349,12 @@ function Player(p) {
     this.avatar = p.avatar;
     this.ignore = false;
 
-    this.tint = color("#FFFFFF");
-
-    if (ROOMS[p.room].tint != null) {
-        this.tint = color(ROOMS[p.room].tint);
-    }
-
-    //tint the image
-    this.avatarGraphics = paletteSwap(walkSheets[p.avatar], AVATAR_PALETTES_RGB[p.color], this.tint);
-    this.spriteSheet = loadSpriteSheet(this.avatarGraphics, AVATAR_W, AVATAR_H, round(walkSheets[p.avatar].width / AVATAR_W));
-    this.walkAnimation = loadAnimation(this.spriteSheet);
-    //emote
-    this.emoteGraphics = paletteSwap(emoteSheets[p.avatar], AVATAR_PALETTES_RGB[p.color], this.tint);
-    // loadSpriteSheet takes a p5.Image (and frame_w, frame_h, num_frames)
-    this.emoteSheet = loadSpriteSheet(this.emoteGraphics, AVATAR_W, AVATAR_H, round(emoteSheets[p.avatar].width / AVATAR_W));
-    this.emoteAnimation = loadAnimation(this.emoteSheet);
-    this.emoteAnimation.frameDelay = 10;
-
     this.sprite = createSprite(100, 100);
 
-    this.sprite.scale = ROOMS[p.room].avatarScale;
-
-    // these are p5.play.SpriteSheet
-    this.sprite.addAnimation('walk', this.walkAnimation);
-    this.sprite.addAnimation('emote', this.emoteAnimation);
+    console.log('color is ' + this.color);
 
     // TODO: tint the sprite a random color
-    this.avatarSprite = tintGraphics(avatarBaseSprite, '#00ff00');
+    this.avatarSprite = tintGraphics(avatarBaseSprite, this.color);
     
     this.sprite.addImage('default', this.avatarSprite);
     
@@ -1394,12 +1374,12 @@ function Player(p) {
     this.sprite.roomId = p.room; //sure anything goes
 
     //save the dominant color for bubbles and rollover label
-    var c = color(AVATAR_PALETTES[p.color][2]);
+    var c = color(this.color)
 
     if (brightness(c) > 30)
-        this.sprite.labelColor = color(AVATAR_PALETTES[p.color][2]);
+        this.sprite.labelColor = color(this.color)
     else
-        this.sprite.labelColor = color(AVATAR_PALETTES[p.color][3]);
+        this.sprite.labelColor = color(this.color)
 
     this.room = p.room;
     this.x = p.x;
@@ -1412,19 +1392,6 @@ function Player(p) {
     if (this.nickName == "")
         this.sprite.visible = false;
 
-    this.stopWalkingAnimation = function () {
-
-        if (this.sprite.getAnimationLabel() == "walk") {
-            this.sprite.changeAnimation("emote");
-            this.sprite.animation.changeFrame(0);
-            this.sprite.animation.stop();
-        }
-    }
-
-    this.playWalkingAnimation = function () {
-        this.sprite.changeAnimation("walk");
-        this.sprite.animation.play();
-    }
 
     this.updatePosition = function () {
         this.sprite.position.x = round(this.x);
