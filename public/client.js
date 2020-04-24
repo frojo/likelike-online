@@ -43,12 +43,15 @@ var ASSET_SCALE = 2;
 var canvasScale;
 
 //all avatars are the same size
-var AVATAR_W = 10;
-var AVATAR_H = 18;
+var AVATAR_W = 16
+var AVATAR_H = 16;
 //number of avatars in the sheets
-var AVATARS = 37;
+var AVATARS = 1;
 //the big file if used
 var ALL_AVATARS_SHEET = "allAvatars.png";
+
+// 
+var AVATAR_SPRITE_FILE = "avatar-white.png";
 //the number of frames for walk cycle and emote animation
 //the first frame of emote is also the idle frame
 var WALK_F = 4;
@@ -130,8 +133,12 @@ var UI_BG = "#000000";
 //preloaded images
 var walkSheets = [];
 var emoteSheets = [];
+
 //the big spritesheet
 var allSheets;
+
+// holds the base avatar sprite
+var avatarSprite;
 
 //current room bg and areas
 var bg;
@@ -257,6 +264,8 @@ function preload() {
 
 
     allSheets = loadImage(ASSETS_FOLDER + ALL_AVATARS_SHEET);
+
+    avatarSprite = loadImage(ASSETS_FOLDER + AVATAR_SPRITE_FILE);
 
     REF_COLORS_RGB = [];
     //to make the palette swap faster I save colors as arrays 
@@ -581,8 +590,7 @@ function newGame() {
 
             //first time
             if (me == null) {
-		// TODO: make these random
-		// 
+		// PLAYER INIT
 		var sx = random(0, WIDTH);
 		var sy = random(0, HEIGHT);
 
@@ -1043,12 +1051,7 @@ function update() {
 
         //draw a background
         background(UI_BG);
-        imageMode(CORNER);
-
-        if (bg != null) {
-            animation(bg, floor(WIDTH / 2), floor(HEIGHT / 2));
-        }
-
+	imageMode(CORNER);
         textFont(font, FONT_SIZE);
 
         //iterate through the players
@@ -1072,7 +1075,6 @@ function update() {
 
         }
 
-        // TODO: This is where we draw the player sprite
         drawSprites();
 
 
@@ -1365,6 +1367,10 @@ function Player(p) {
     this.sprite.addAnimation('walk', this.walkAnimation);
     this.sprite.addAnimation('emote', this.emoteAnimation);
 
+    // TODO: add image instead
+    this.sprite.addImage('default', avatarSprite);
+    
+
 
     if (this.nickName == "")
         this.sprite.mouseActive = false;
@@ -1452,7 +1458,8 @@ function Player(p) {
         }
     }
 
-    this.stopWalkingAnimation();
+    // this.stopWalkingAnimation();
+    this.sprite.changeImage('default');
 }
 
 
