@@ -131,14 +131,16 @@ var UI_BG = "#000000";
 //global vars! I love global vars ///////////////////
 
 //preloaded images
+//these are arrays of p5.Images, where each image is a sprite sheet of an
+//an animation (walk or emote) for an avatar. index into them with avatar number
 var walkSheets = [];
 var emoteSheets = [];
 
 //the big spritesheet
 var allSheets;
 
-// holds the base avatar sprite
-var avatarSprite;
+// holds the base avatar sprite (it's white, no tinting yet)
+var avatarBaseSprite;
 
 //current room bg and areas
 var bg;
@@ -265,7 +267,7 @@ function preload() {
 
     allSheets = loadImage(ASSETS_FOLDER + ALL_AVATARS_SHEET);
 
-    avatarSprite = loadImage(ASSETS_FOLDER + AVATAR_SPRITE_FILE);
+    avatarBaseSprite = loadImage(ASSETS_FOLDER + AVATAR_SPRITE_FILE);
 
     REF_COLORS_RGB = [];
     //to make the palette swap faster I save colors as arrays 
@@ -279,6 +281,8 @@ function preload() {
 
     AVATAR_PALETTES_RGB = [];
     //to make the palette swap faster I save colors as arrays 
+    // this converts from an array of arrays of (hex) strings to 
+    // an array of array of numbers? 
     for (var i = 0; i < AVATAR_PALETTES.length; i++) {
 
         AVATAR_PALETTES_RGB[i] = [];
@@ -1356,6 +1360,7 @@ function Player(p) {
     this.walkAnimation = loadAnimation(this.spriteSheet);
     //emote
     this.emoteGraphics = paletteSwap(emoteSheets[p.avatar], AVATAR_PALETTES_RGB[p.color], this.tint);
+    // loadSpriteSheet takes a p5.Image (and frame_w, frame_h, num_frames)
     this.emoteSheet = loadSpriteSheet(this.emoteGraphics, AVATAR_W, AVATAR_H, round(emoteSheets[p.avatar].width / AVATAR_W));
     this.emoteAnimation = loadAnimation(this.emoteSheet);
     this.emoteAnimation.frameDelay = 10;
@@ -1364,11 +1369,14 @@ function Player(p) {
 
     this.sprite.scale = ROOMS[p.room].avatarScale;
 
+    // these are p5.play.SpriteSheet
     this.sprite.addAnimation('walk', this.walkAnimation);
     this.sprite.addAnimation('emote', this.emoteAnimation);
 
-    // TODO: add image instead
-    this.sprite.addImage('default', avatarSprite);
+    // TODO: tint the sprite a random color
+    this.avatarSprite = tintGraphics(avatarBaseSprite, '#00ff00');
+    
+    this.sprite.addImage('default', this.avatarSprite);
     
 
 
@@ -1984,6 +1992,7 @@ function previewAvatar() {
     menuGroup.add(avatarPreview);
 }
 
+// returns a p5.Image
 function paletteSwap(ss, palette, t) {
 
     var tint = [255, 255, 255];
