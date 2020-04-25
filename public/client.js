@@ -637,11 +637,10 @@ function newGame() {
                     rolledSprite = null;
 
                     //the location appears in the url
-                    if (ROOM_LINK && ROOMS[p.room] != null)
-                        window.history.replaceState(null, null, "?room=" + p.room);
+                    // if (ROOM_LINK && ROOMS[p.room] != null)
+                    //     window.history.replaceState(null, null, "?room=" + p.room);
 
                     players = {};
-                    bubbles = [];
 
                     deleteAllSprites();
 
@@ -767,18 +766,14 @@ function newGame() {
                 }
 
                 if (p.new && p.nickName != "" && firstLog) {
-                    var spark = createSprite(p.x, p.y - AVATAR_H + 1);
-                    spark.addAnimation("spark", appearEffect);
-                    spark.scale = ASSET_SCALE;
-                    spark.life = 60;
-                    if (SOUND)
-                        appearSound.play();
+		    // example of animating something on first connect
+                    // var spark = createSprite(p.x, p.y - AVATAR_H + 1);
+                    // spark.addAnimation("spark", appearEffect);
+                    // spark.scale = ASSET_SCALE;
+                    // spark.life = 60;
+                    // if (SOUND)
+                    //     appearSound.play();
 
-                    if (p.id == me.id) {
-                        longText = SETTINGS.INTRO_TEXT;
-                        longTextLines = 1;
-                        longTextAlign = "center";//or center
-                    }
 
                     firstLog = false;
                 }
@@ -1261,8 +1256,10 @@ function scaleCanvas() {
 
 function colorSelection() {
 
-    // todo: make the default color random
-    colorPicker = createColorPicker('#FF0000');
+    // todo: maybe read this https://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
+    // and make better random colors
+    var randomColor = color(floor(random(255)), floor(random(255)), floor(random(255)));
+    colorPicker = createColorPicker(randomColor);
     colorPicker.parent('color-picker-container');
 
     // call setCurrentColor() every time user sets color with color picker
