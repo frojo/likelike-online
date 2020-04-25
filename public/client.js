@@ -92,6 +92,10 @@ var LOGO_STAY = -1;
 //default page background 
 var PAGE_COLOR = "#000000";
 
+// grey instagram background
+var INSTA_GREY = '#FAFAFA';
+
+
 //sprite reference color for palette swap
 //hair, skin, shirt, pants
 var REF_COLORS = ['#413830', '#c0692a', '#ff004d', '#29adff'];
@@ -190,6 +194,9 @@ var nickName = "";
 //these are indexes of arrays not images or colors
 var currentAvatar;
 var currentColor;
+
+// holds the color picker (can do colorPicker.color() to get current value)
+var colorPicker;
 
 //this object keeps track of all the current players in the room, coordinates, bodies and color
 var players;
@@ -301,6 +308,7 @@ function preload() {
     menuBg = loadImage(ASSETS_FOLDER + MENU_BG_FILE);
     arrowButton = loadImage(ASSETS_FOLDER + "arrowButton.png");
 
+    // TODO: change logo (active now?)
     var logoSheet = loadSpriteSheet(ASSETS_FOLDER + LOGO_FILE, 66, 82, 4);
     logo = loadAnimation(logoSheet);
     logo.frameDelay = 10;
@@ -538,6 +546,7 @@ function newGame() {
     logoCounter = 0;
 
     hideUser();
+    hideColor();
     hideAvatar();
 
     if (menuGroup != null)
@@ -598,14 +607,11 @@ function newGame() {
 		var sx = random(0, WIDTH);
 		var sy = random(0, HEIGHT);
 
-		currentColor = '#0000ff';
-
                 //send the server my name and avatar
                 socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: SETTINGS.defaultRoom, x: sx, y: sy });
             }
             else {
 
-		currentColor = '#0000ff';
                 socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: me.room, x: me.x, y: me.y });
             }
         } catch (e) {
@@ -918,7 +924,8 @@ function newGame() {
                 errorMessage = msg;
                 hideChat();
                 hideUser();
-                hideAvatar();
+                hideColor();
+		hideAvatar();
                 hideJoin();
             }
         }
@@ -1024,15 +1031,15 @@ function update() {
     }
     //renders the avatar selection screen which can be fully within the canvas
     else if (screen == "avatar") {
-        image(menuBg, 0, 0, WIDTH, HEIGHT);
+	background(INSTA_GREY);
 
         textFont(font, FONT_SIZE * 2);
         textAlign(CENTER, BASELINE);
         fill(0);
-        text("Body", 24 * ASSET_SCALE, 44 * ASSET_SCALE);
-        text("Color", 105 * ASSET_SCALE, 44 * ASSET_SCALE);
 
-        text("Choose your avatar", 64 * ASSET_SCALE, 18 * ASSET_SCALE);
+        text('choose your color', WIDTH / 2, HEIGHT * .2);
+
+      
 
         menuGroup.draw();
 
@@ -1251,6 +1258,27 @@ function scaleCanvas() {
     form.setAttribute("style", "width:" + WIDTH * canvasScale + "px;");
 
 }
+
+function colorSelection() {
+
+    // todo: make the default color random
+    colorPicker = createColorPicker('#FF0000');
+    colorPicker.parent('color-picker-container');
+
+    // call setCurrentColor() every time user sets color with color picker
+    colorPicker.input(setCurrentColor);
+    setCurrentColor();
+    // todo: close the color picker window that the user has open? can we?
+    
+    // todo: style the color picker button to fit our style
+
+}
+
+function setCurrentColor() {
+  // .value() returns a color string
+  currentColor = colorPicker.value();
+}
+    
 
 //I could do this in DOM (regular html and javascript elements) 
 //but I want to show a canvas with html overlay
@@ -1928,8 +1956,10 @@ function nameValidationCallBack(code) {
         else {
 
             hideUser();
-            showAvatar();
-            avatarSelection();
+	    showColor();
+	    colorSelection();
+            //showAvatar();
+            //avatarSelection();
         }
     }
 }
@@ -2029,7 +2059,7 @@ function joinGame() {
 
 }
 
-function bodyOk() {
+function colorOk() {
 
     newGame();
 }
@@ -2052,6 +2082,16 @@ function showUser() {
         e.style.display = "block";
 }
 
+function showColor() {
+    var e = document.getElementById("color-form");
+    if (e != null)
+        e.style.display = "block";
+
+    e = document.getElementById("color-container");
+    if (e != null)
+        e.style.display = "block";
+}
+
 function hideUser() {
     var e = document.getElementById("user-form");
     if (e != null)
@@ -2062,13 +2102,23 @@ function hideUser() {
         e.style.display = "none";
 }
 
-function showAvatar() {
+function hideColor() {
+    var e = document.getElementById("color-form");
+    if (e != null)
+        e.style.display = "none";
 
+    e = document.getElementById("color-container");
+    if (e != null)
+        e.style.display = "none";
+}
+
+
+// shows the "continue" button right before entering
+function showAvatar() {
     var e = document.getElementById("avatar-form");
     if (e != null) {
         e.style.display = "block";
     }
-
 }
 
 //don't show the link while the canvas loads

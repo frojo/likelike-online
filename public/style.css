@@ -94,6 +94,7 @@ canvas {
 
 /*USERNAME*/
 
+.color-message,
 .lobby-message {
     font-size: 64px;
     margin-bottom: 32px;
@@ -114,6 +115,7 @@ canvas {
 .talk-button,
 .join-button,
 .user-button,
+.color-button,
 .avatar-button {
 	font-family: monogram;
 	font-size: 64px;
@@ -200,6 +202,7 @@ canvas {
 
 .talk-button:active,
 .user-button:active,
+.color-button:active,
 .avatar-button:active,
 .join-button:active {
     background: #ff77a8;
@@ -210,6 +213,7 @@ canvas {
 
 .talk-button:hover,
 .user-button:hover,
+.color-button:hover,
 .avatar-button:hover,
 .join-button:hover {
 	background: #ff77a8;
@@ -232,6 +236,12 @@ canvas {
 	display: block;
     height: 100%;
 }
+
+#color-container {
+	display: block;
+    height: 100%;
+}
+
 
 
 /* center on container */

@@ -57,6 +57,20 @@
 
             </div>
         </div>
+        <div id="color-container" style="display: none;">
+            <div class="content-center">
+
+                <div class="color-message">choose your color</div>
+                <div id="color-picker-container"></div>
+		<!--
+                <form action="" onsubmit="return nameOk()">
+                    <input id="lobby-field" class="lobby-field" placeholder="username" maxlength="16" autocomplete="off"
+                        autocorrect="off" autocapitalize="off" spellcheck="false" />
+                </form>
+		-->
+
+            </div>
+        </div>
 
 
 
@@ -76,6 +90,11 @@
         <form id="avatar-form" action="" onsubmit="return bodyOk()" style="display: none;">
             <!-- call the function below on button press-->
             <button class="avatar-button" type="button" onclick="bodyOk();">CONTINUE</button>
+        </form>
+
+        <form id="color-form" action="" onsubmit="return colorOk()" style="display: none;">
+            <!-- call the function below on button press-->
+            <button class="color-button" type="button" onclick="colorOk();">continue</button>
         </form>
 
         <form id="talk-form" action="" onsubmit="return getTalkInput()" style="display: none;">
