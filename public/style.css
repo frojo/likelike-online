@@ -1,6 +1,9 @@
 @font-face {
+	/* 
 	font-family: monogram;
 	src: url("assets/monogram_extended.ttf");
+	*/
+	font-family: system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 
 html {
@@ -10,6 +13,7 @@ html {
 
 body {
 	font-family: monogram;
+	font-family: system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 	font-size: 32px;
 	margin: 0px;
 	padding: 0px;
@@ -74,6 +78,7 @@ canvas {
 .talk-field,
 .lobby-field {
 	font-family: monogram;
+	font-family: system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 	border: none;
 	padding-top: 4px;
 	padding-bottom: 10px;
@@ -118,6 +123,7 @@ canvas {
 .color-button,
 .avatar-button {
 	font-family: monogram;
+	font-family: system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 	font-size: 64px;
 	margin: 0px;
 	display: inline-block;

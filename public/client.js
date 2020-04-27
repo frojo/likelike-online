@@ -327,7 +327,8 @@ function preload() {
     //disappearEffect.frameDelay = 4;
     disappearEffect.looping = false;
 
-    font = loadFont(FONT_FILE);
+    // font = loadFont(FONT_FILE);
+    font = 'Helvetica';
 
     //load sound
     soundFormats('mp3', 'ogg');
@@ -1057,7 +1058,7 @@ function update() {
         }
 
         //draw a background
-        background(UI_BG);
+        background(INSTA_GREY);
 	imageMode(CORNER);
         textFont(font, FONT_SIZE);
 
@@ -1218,7 +1219,14 @@ function update() {
 
         if (nickName == "" && (logoCounter < LOGO_STAY || LOGO_STAY == -1)) {
             logoCounter += deltaTime;
-            animation(logo, floor(width / 2), floor(height / 2));
+
+	    // draw logo
+	    
+            textAlign(CENTER, BASELINE);
+
+	    text('active now', WIDTH/2, HEIGHT/2);
+	    
+            // animation(logo, floor(width / 2), floor(height / 2));
         }
 
     }//end game
