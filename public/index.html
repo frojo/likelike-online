@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>Active now</title>
+    <title>active now</title>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
@@ -47,7 +47,7 @@
         <div id="lobby-container" style="display: none;">
             <div class="content-center">
 
-                <div class="lobby-message">What's your name?</div>
+                <div class="lobby-message">who are you?</div>
                 <form action="" onsubmit="return nameOk()">
                     <input id="lobby-field" class="lobby-field" placeholder="username" maxlength="16" autocomplete="off"
                         autocorrect="off" autocapitalize="off" spellcheck="false" />
@@ -73,7 +73,7 @@
         <!-- talk form is below canvas getTalkInput is what happens when return is pressed-->
         <form id="join-form" action="" onsubmit="return joinGame()" style="display: none;">
             <!-- call the function below on button press-->
-            <button class="join-button" type="button" onclick="joinGame();">JOIN</button>
+            <button class="join-button" type="button" onclick="joinGame();">join</button>
         </form>
 
         <form id="user-form" action="" onsubmit="return nameOk()" style="display: none;">
@@ -90,13 +90,6 @@
             <!-- call the function below on button press-->
             <button class="color-button" type="button" onclick="colorOk();">continue</button>
         </form>
-
-        <form id="talk-form" action="" onsubmit="return getTalkInput()" style="display: none;">
-            <input class="talk-field" placeholder="TYPE HERE" maxlength="40" id="chatField" autocomplete="off" />
-            <!-- call the function below on button press-->
-            <button class="talk-button" type="button" onclick="getTalkInput();">TALK</button>
-        </form>
-
 
     </div>
     <div id="info" class="info"><a href="https://fran.red/" target="_blank">maintained by fran.red</a></div>

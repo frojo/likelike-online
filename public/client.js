@@ -27,17 +27,9 @@ var SOUND = true;
 var AFK = false;
 
 //native canvas resolution
-var WIDTH = 256;
-var HEIGHT = 200;
+var WIDTH = 1024;
+var HEIGHT = 800;
 
-/*
-The original resolution (pre canvas stretch) is 128x100 multiplied by 2 because
-otherwise there wouldn't be enough room for pixel text.
-Basically the backgrounds' pixels are twice the pixels of the text.
-ASSET_SCALE is a multiplier for all backgrounds, areas, sprites, and coordinates
-that are natively drawn at 128x100
-*/
-var ASSET_SCALE = 2;
 
 //dynamically adjusted based on the window
 var canvasScale;
@@ -72,7 +64,7 @@ var ASSETS_FOLDER = "assets/";
 //MONOSPACED FONT
 //thank you https://datagoblin.itch.io/monogram
 var FONT_FILE = "assets/monogram_extended.ttf";
-var FONT_SIZE = 16; //to avoid blur
+var FONT_SIZE = 64; //to avoid blur
 var font;
 var TEXT_H = 8;
 var TEXT_PADDING = 3;
@@ -249,7 +241,7 @@ Things are quite asynchronous here. This is the startup sequence:
 //setup is called when all the assets have been loaded
 function preload() {
 
-    document.body.style.backgroundColor = PAGE_COLOR;
+    document.body.style.backgroundColor = 'black';
 
     //avatar spritesheets are programmatically tinted so they need to be pimages before being loaded as spritesheets
 
@@ -369,7 +361,7 @@ function setup() {
     scaleCanvas();
 
     //since my avatars are pixelated and scaled I kill the antialiasing on canvas
-    noSmooth();
+    // noSmooth();
 
     //the page link below
     showInfo();
@@ -519,7 +511,7 @@ function setupGame() {
     else if (!LURK_MODE) {
 
         //paint background
-        image(menuBg, 0, 0, WIDTH, HEIGHT);
+	background(PAGE_COLOR);
         hideJoin();
         showUser();
 
@@ -556,9 +548,6 @@ function newGame() {
     if (nickName == "") {
         showJoin();
     }
-    else {
-        showChat();
-    }
 
     //this is not super elegant but I create another socket for the actual game
     //because I've got the data from the server and I don't want to reinitiate everything 
@@ -575,7 +564,7 @@ function newGame() {
     });
 
     //paint background
-    background(UI_BG);
+    background(PAGE_COLOR);
 
     //initialize players as object
     players = {};
@@ -657,93 +646,7 @@ function newGame() {
                     me.sprite.onMousePressed = function () { socket.emit('emote', { room: me.room, em: true }); };
                     me.sprite.onMouseReleased = function () { socket.emit('emote', { room: me.room, em: false }); };
 
-                    room = p.room;
 
-                    //if a page background is specified change it
-                    if (ROOMS[p.room].pageBg != null)
-                        document.body.style.backgroundColor = ROOMS[p.room].pageBg;
-                    else
-                        document.body.style.backgroundColor = PAGE_COLOR;
-
-                    //load level background
-
-                    if (ROOMS[p.room].bgGraphics != null) {
-                        //can be static or spreadsheet
-                        var bgg = ROOMS[p.room].bgGraphics;
-
-                        //find frame number
-                        var f = 1;
-                        if (ROOMS[p.room].frames != null)
-                            f = ROOMS[p.room].frames;
-
-                        var ss = loadSpriteSheet(bgg, WIDTH, HEIGHT, f);
-                        bg = loadAnimation(ss);
-
-                        if (ROOMS[p.room].frameDelay != null) {
-                            bg.frameDelay = ROOMS[p.room].frameDelay;
-                        }
-                    }
-
-                    if (ROOMS[p.room].avatarScale == null)
-                        ROOMS[p.room].avatarScale = 2;
-
-                    areas = ROOMS[p.room].areaGraphics;
-                    if (areas == null)
-                        print("ERROR: no area assigned to  " + p.room);
-
-                    //create sprites
-                    if (ROOMS[p.room].sprites != null)
-                        for (var i = 0; i < ROOMS[p.room].sprites.length; i++) {
-                            var sprite = ROOMS[p.room].sprites[i];
-
-                            var f = 1;
-
-                            if (sprite.frames != null)
-                                f = sprite.frames;
-
-                            var sw = floor(sprite.spriteGraphics.width / f);
-                            var sh = sprite.spriteGraphics.height;
-
-                            var ss = loadSpriteSheet(sprite.spriteGraphics, sw, sh, f);
-                            var animation = loadAnimation(ss);
-
-                            if (sprite.frameDelay != null)
-                                animation.frameDelay = sprite.frameDelay;
-
-
-                            //the position is the bottom left
-                            var newSprite = createSprite(sprite.position[0] * ASSET_SCALE + floor(sw / 2), sprite.position[1] * ASSET_SCALE + floor(sh / 2));
-                            newSprite.addAnimation("default", animation);
-
-                            //if label make it rollover reactive
-                            newSprite.label = sprite.label;
-                            if (sprite.label != null) {
-
-                                newSprite.onMouseOver = function () {
-                                    rolledSprite = this;
-                                };
-
-                                newSprite.onMouseOut = function () {
-                                    if (rolledSprite == this)
-                                        rolledSprite = null;
-                                };
-                            }
-                            //if command, make it interactive like an area
-                            if (sprite.command != null) {
-                                newSprite.command = sprite.command;
-
-                                newSprite.onMouseReleased = function () {
-                                    if (rolledSprite == this)
-                                        moveToCommand(this.command);
-                                };
-                            }
-
-                        }
-
-                    //initialize the mod if any
-                    if (window.initMod != null) {
-                        window.initMod(p.id, p.room);
-                    }
 
                 }//it me
                 else {
@@ -918,7 +821,6 @@ function newGame() {
             if (socket.id) {
                 screen = "error";
                 errorMessage = msg;
-                hideChat();
                 hideUser();
                 hideColor();
 		hideAvatar();
@@ -1023,11 +925,11 @@ function newGame() {
 function update() {
 
     if (screen == "user") {
-        image(menuBg, 0, 0, WIDTH, HEIGHT);
+	background(PAGE_COLOR);
     }
     //renders the avatar selection screen which can be fully within the canvas
     else if (screen == "avatar") {
-	background(INSTA_GREY);
+	background(PAGE_COLOR);
 
         textFont(font, FONT_SIZE * 2);
         textAlign(CENTER, BASELINE);
@@ -1058,8 +960,7 @@ function update() {
         }
 
         //draw a background
-        background(INSTA_GREY);
-	imageMode(CORNER);
+        background(PAGE_COLOR);
         textFont(font, FONT_SIZE);
 
         //iterate through the players
@@ -1091,6 +992,7 @@ function update() {
             animation(walkIcon, floor(mouseX + 6), floor(mouseY - 6));
 
         //draw all the speech bubbles lines first only if the players have not moves since speaking
+	/* 
         for (var i = 0; i < bubbles.length; i++) {
             var b = bubbles[i];
             var speaker = players[bubbles[i].pid];
@@ -1123,6 +1025,7 @@ function update() {
                 i--; //decrement
             }
         }
+	*/
 
         var label = areaLabel;
         var labelColor = LABEL_NEUTRAL_COLOR;
@@ -1224,6 +1127,10 @@ function update() {
 	    
             textAlign(CENTER, BASELINE);
 
+	    // white with black outline
+            fill(255);
+	    stroke(0);
+	    strokeWeight(1);
 	    text('active now', WIDTH/2, HEIGHT/2);
 	    
             // animation(logo, floor(width / 2), floor(height / 2));
@@ -2033,7 +1940,7 @@ function tintGraphics(img, colorString) {
 
     var c = color(colorString);
     let pg = createGraphics(img.width, img.height);
-    pg.noSmooth();
+    // pg.noSmooth();
     pg.tint(red(c), green(c), blue(c), 255);
     pg.image(img, 0, 0, img.width, img.height);
     //i need to convert it back to image in order to use it as spritesheet
@@ -2149,20 +2056,6 @@ function showJoin() {
 
 function hideJoin() {
     document.getElementById("join-form").style.display = "none";
-}
-
-//enable the chat input when it's time
-function showChat() {
-    var e = document.getElementById("talk-form");
-
-    if (e != null)
-        e.style.display = "block";
-}
-
-function hideChat() {
-    var e = document.getElementById("talk-form");
-    if (e != null)
-        e.style.display = "none";
 }
 
 function outOfCanvas() {
