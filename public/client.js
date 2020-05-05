@@ -43,7 +43,7 @@ var AVATARS = 1;
 var ALL_AVATARS_SHEET = "allAvatars.png";
 
 // 
-var AVATAR_SPRITE_FILE = "avatar-white.png";
+var AVATAR_SPRITE_FILE = "avatar-large.png";
 //the number of frames for walk cycle and emote animation
 //the first frame of emote is also the idle frame
 var WALK_F = 4;
@@ -86,7 +86,6 @@ var PAGE_COLOR = "#000000";
 
 // grey instagram background
 var INSTA_GREY = '#FAFAFA';
-
 
 //sprite reference color for palette swap
 //hair, skin, shirt, pants
@@ -241,7 +240,7 @@ Things are quite asynchronous here. This is the startup sequence:
 //setup is called when all the assets have been loaded
 function preload() {
 
-    document.body.style.backgroundColor = 'black';
+    document.body.style.backgroundColor = '';
 
     //avatar spritesheets are programmatically tinted so they need to be pimages before being loaded as spritesheets
 
@@ -365,29 +364,6 @@ function setup() {
 
     //the page link below
     showInfo();
-
-    //if using a single spritesheet slice it up
-    if (walkSheets.length == 0 && allSheets != null) {
-
-        var sliceX = 0;
-
-
-        for (var i = 0; i < AVATARS; i++) {
-
-            var walkSheet = createImage(AVATAR_W * WALK_F, AVATAR_H);
-            walkSheet.copy(allSheets, sliceX, 0, AVATAR_W * WALK_F, AVATAR_H, 0, 0, AVATAR_W * WALK_F, AVATAR_H);
-            walkSheets[i] = walkSheet;
-
-            sliceX += AVATAR_W * WALK_F;
-
-            var emoteSheet = createImage(AVATAR_W * EMOTE_F, AVATAR_H);
-            emoteSheet.copy(allSheets, sliceX, 0, AVATAR_W * EMOTE_F, AVATAR_H, 0, 0, AVATAR_W * EMOTE_F, AVATAR_H);
-            emoteSheets[i] = emoteSheet;
-
-            sliceX += AVATAR_W * EMOTE_F;
-
-        }
-    }
 
     //I create a socket but I wait to assign all the functions before opening a connection
     socket = io({
@@ -635,6 +611,9 @@ function newGame() {
                     deleteAllSprites();
 
                     players[p.id] = me = new Player(p);
+		
+		    camera.position.x = me.x;
+		    camera.position.y = me.y;
 
                     /*
                     me.sprite.mouseActive = false;
@@ -645,6 +624,7 @@ function newGame() {
                     //click on me = emote
                     me.sprite.onMousePressed = function () { socket.emit('emote', { room: me.room, em: true }); };
                     me.sprite.onMouseReleased = function () { socket.emit('emote', { room: me.room, em: false }); };
+
 
 
 
@@ -960,7 +940,15 @@ function update() {
         }
 
         //draw a background
-        background(PAGE_COLOR);
+	// for some reason, background() wasn't drawing the whole background
+	// and i don't feel like debugging that
+        // background(PAGE_COLOR);
+	camera.off();
+	fill(PAGE_COLOR);
+	rect(0, 0, WIDTH, HEIGHT);
+	camera.on();
+
+
         textFont(font, FONT_SIZE);
 
         //iterate through the players
@@ -984,8 +972,34 @@ function update() {
 
         }
 
-        drawSprites();
 
+	// maybe i want to make the camera move a little different
+	// like instead of rect dead zone, a circle dead zone
+	// maybe make it move faster if your mouse is farther outside the canvas
+	// maybe only click to move? so people don't move accidentally
+	
+	// knobs for camera behavior
+	var pan_speed = 4;
+
+	// only move camera if mouse is in canvas
+	if (mouseX > 0 && mouseX < WIDTH &&
+	    mouseY > 0 && mouseY < HEIGHT) {
+	  // move camera if mouse is near the edges
+	  if (mouseX > WIDTH *.8) {
+	    camera.position.x += pan_speed;
+	  }
+	  if (mouseX < WIDTH*.2) {
+	    camera.position.x -= pan_speed;
+	  }
+	  if (mouseY > HEIGHT*.8) {
+	    camera.position.y += pan_speed;
+	  }
+	  if (mouseY < HEIGHT*.2) {
+	    camera.position.y -= pan_speed;
+	  }
+	}
+
+        drawSprites();
 
         //GUI
         if (nickName != "" && rolledSprite == null && areaLabel == "")
@@ -1123,9 +1137,10 @@ function update() {
         if (nickName == "" && (logoCounter < LOGO_STAY || LOGO_STAY == -1)) {
             logoCounter += deltaTime;
 
-	    // draw logo
-	    
+	    // we draw ui without camera
+	    camera.off()
             textAlign(CENTER, BASELINE);
+	    textFont(font, FONT_SIZE);
 
 	    // white with black outline
             fill(255);
@@ -1756,12 +1771,7 @@ function executeCommand(c) {
 
 }
 
-//For better user experience I automatically focus on the chat textfield upon pressing a key
 function keyPressed() {
-    if (screen == "game") {
-        var field = document.getElementById("chatField");
-        field.focus();
-    }
     if (screen == "user") {
         var field = document.getElementById("lobby-field");
         field.focus();
