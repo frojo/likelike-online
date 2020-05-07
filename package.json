@@ -3,7 +3,8 @@
     "version": "0.0.1",
     "description": "example",
     "scripts": {
-        "start": "node server.js"
+        "start": "node server.js",
+        "test": "(npm start) && node test.js"
     },
     "dependencies": {
         "bad-words": "^3.0.3",

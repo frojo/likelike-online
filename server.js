@@ -40,7 +40,6 @@ var http = require('http').createServer(app);
 var io = require('socket.io')(http);
 var Filter = require('bad-words');
 
-
 //time before disconnecting (forgot the tab open?)
 var ACTIVITY_TIMEOUT = 10 * 60 * 1000;
 //should be the same as index maxlength="16"

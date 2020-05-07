@@ -216,6 +216,9 @@ var firstLog = true;
 var dataLoaded = false;
 var gameStarted = false;
 
+// is the player dragging to pan?
+var isPanning = false;
+
 
 /*
 Things are quite asynchronous here. This is the startup sequence:
@@ -240,7 +243,7 @@ Things are quite asynchronous here. This is the startup sequence:
 //setup is called when all the assets have been loaded
 function preload() {
 
-    document.body.style.backgroundColor = '';
+    document.body.style.backgroundColor = 'black';
 
     //avatar spritesheets are programmatically tinted so they need to be pimages before being loaded as spritesheets
 
@@ -973,6 +976,8 @@ function update() {
         }
 
 
+	//todo: change this so it's drag to pan
+
 	// maybe i want to make the camera move a little different
 	// like instead of rect dead zone, a circle dead zone
 	// maybe make it move faster if your mouse is farther outside the canvas
@@ -1571,10 +1576,14 @@ function mouseMoved() {
 //stop emoting
 function canvasPressed() {
 
-    //emote only if not walking
-    if (nickName != "" && screen == "game" && mouseButton == RIGHT) {
-        if (me.destinationX == me.x && me.destinationY == me.y)
-            socket.emit('emote', { room: me.room, em: true });
+    if (nickName != "" && screen == "game") {
+      isPanning = true;
+
+      //   if (me.destinationX == me.x && me.destinationY == me.y)
+      //       socket.emit('emote', { room: me.room, em: true });
+
+
+
     }
 }
 
@@ -1584,6 +1593,7 @@ function canvasReleased() {
 
     //print("CLICK " + mouseButton);
 
+    isPanning = false;
     if (screen == "error") {
     }
     else if (nickName != "" && screen == "game" && mouseButton == RIGHT) {
@@ -2071,6 +2081,8 @@ function hideJoin() {
 function outOfCanvas() {
     areaLabel = "";
     rolledSprite = null;
+
+    isPanning = false;
 }
 
 //disable scroll on phone
@@ -2078,17 +2090,18 @@ function preventBehavior(e) {
     e.preventDefault();
 };
 
-document.addEventListener("touchmove", preventBehavior, { passive: false });
-
-// Active
-window.addEventListener('focus', function () {
-    if (socket != null && me != null)
-        socket.emit('focus', { room: me.room });
-});
-
-// Inactive
-window.addEventListener('blur', function () {
-    if (socket != null && me != null)
-        socket.emit('blur', { room: me.room });
-});
-
+// TODO: uncomment when done with testing/dev
+// document.addEventListener("touchmove", preventBehavior, { passive: false });
+// 
+// // Active
+// window.addEventListener('focus', function () {
+//     if (socket != null && me != null)
+//         socket.emit('focus', { room: me.room });
+// });
+// 
+// // Inactive
+// window.addEventListener('blur', function () {
+//     if (socket != null && me != null)
+//         socket.emit('blur', { room: me.room });
+// });
+// 
