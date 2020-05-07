@@ -975,34 +975,15 @@ function update() {
 
         }
 
+	// click and drag to pan camera
+	// if (isPanning) {
+	//   let dx = mouseX - pmouseX;
+	//   camera.position.x += -dx;
+	//   let dy = mouseY - pmouseY;
+	//   camera.position.y += -dy;
+	// }
 
-	//todo: change this so it's drag to pan
 
-	// maybe i want to make the camera move a little different
-	// like instead of rect dead zone, a circle dead zone
-	// maybe make it move faster if your mouse is farther outside the canvas
-	// maybe only click to move? so people don't move accidentally
-	
-	// knobs for camera behavior
-	var pan_speed = 4;
-
-	// only move camera if mouse is in canvas
-	if (mouseX > 0 && mouseX < WIDTH &&
-	    mouseY > 0 && mouseY < HEIGHT) {
-	  // move camera if mouse is near the edges
-	  if (mouseX > WIDTH *.8) {
-	    camera.position.x += pan_speed;
-	  }
-	  if (mouseX < WIDTH*.2) {
-	    camera.position.x -= pan_speed;
-	  }
-	  if (mouseY > HEIGHT*.8) {
-	    camera.position.y += pan_speed;
-	  }
-	  if (mouseY < HEIGHT*.2) {
-	    camera.position.y -= pan_speed;
-	  }
-	}
 
         drawSprites();
 
