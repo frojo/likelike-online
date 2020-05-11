@@ -219,6 +219,8 @@ var gameStarted = false;
 // is the player dragging to pan?
 var isPanning = false;
 
+// is the player relogging in
+var relog = false;
 
 /*
 Things are quite asynchronous here. This is the startup sequence:
@@ -380,7 +382,7 @@ function setup() {
 
     //first server message with version and game data
     socket.on('serverWelcome',
-        function (serverVersion, DATA) {
+        function (serverVersion, DATA, isRelog) {
             if (socket.id) {
                 console.log("Welcome! Server version: " + serverVersion + " - client version " + VERSION);
 
@@ -390,6 +392,8 @@ function setup() {
                     document.body.innerHTML = errorMessage;
                     socket.disconnect();
                 }
+
+		relog = isRelog;
 
                 ROOMS = DATA.ROOMS;
                 SETTINGS = DATA.SETTINGS;
@@ -499,10 +503,7 @@ function setupGame() {
 
     }
     else {
-        //nickname blank means invisible - lurk mode
         nickName = "";
-        currentColor = floor(random(0, AVATAR_PALETTES.length));
-        currentAvatar = floor(random(0, walkSheets.length));
         newGame();
     }
 }
@@ -524,7 +525,8 @@ function newGame() {
     if (menuGroup != null)
         menuGroup.removeSprites();
 
-    if (nickName == "") {
+    // if we're lurking and not re logging in, show join/creation screen
+    if (nickName == "" && !relog) {
         showJoin();
     }
 
@@ -556,7 +558,6 @@ function newGame() {
     //the previous player list to avoid ghosts
     //as long as the clients are open they should not lose their avatar and position even if the server is down
     socket.on('connect', function () {
-
         try {
             players = {};
 
@@ -573,15 +574,15 @@ function newGame() {
             //first time
             if (me == null) {
 		// PLAYER INIT init
-		var sx = random(0, WIDTH);
-		var sy = random(0, HEIGHT);
+		
+		console.log('sending first join');
 
                 //send the server my name and avatar
-                socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: SETTINGS.defaultRoom, x: sx, y: sy });
+                socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: SETTINGS.defaultRoom});
             }
             else {
 
-                socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: me.room, x: me.x, y: me.y });
+                socket.emit('join', { nickName: nickName, color: currentColor, avatar: currentAvatar, room: me.room, });
             }
         } catch (e) {
             console.log("Error on connect");
@@ -601,6 +602,7 @@ function newGame() {
                 p.destinationX = p.x;
                 p.destinationY = p.y;
 
+		console.log('o a player joined...');
                 //if it's me///////////
                 if (socket.id == p.id) {
                     rolledSprite = null;
@@ -614,6 +616,7 @@ function newGame() {
                     deleteAllSprites();
 
                     players[p.id] = me = new Player(p);
+		    nickName = me.nickName;
 		
 		    camera.position.x = me.x;
 		    camera.position.y = me.y;
@@ -694,6 +697,23 @@ function newGame() {
         }
     );
 
+    // when a player reopens the page
+    socket.on('playerRejoined',
+        function (p) {
+            try {
+		// the client /should/ have this player on record already
+		// but in case we don't, just re-init it
+                players[p.id] = new Player(p);
+
+                console.log("Player " + p.id + " has rejoined the network");
+            } catch (e) {
+                console.log("Error on playerRejoined");
+                console.error(e);
+            }
+        }
+    );
+
+
 
     //when somebody clicks to move, update the destination (not the position)
     socket.on('playerMoved',
@@ -712,6 +732,24 @@ function newGame() {
                 console.error(e);
             }
         });
+
+    //when somebody disconnects/leaves focus from their window
+    socket.on('playerInactive',
+        function (p) {
+            try {
+	      // todo: blur them out?
+	      // todo: mark them inactive (and start some time)
+	      // how do we know and get other people to know how
+	      // long since it's been since we've been active?
+	      // did they disconnect or leave focuse? we probably don't care
+	      console.log('Player ' + p.id + ' is inactive')
+	      
+            } catch (e) {
+                console.log("Error on playerLeft");
+                console.error(e);
+            }
+        }
+    );
 
 
     //when somebody disconnects/leaves the room
@@ -857,8 +895,9 @@ function newGame() {
 
 
     //server sends out the response to the name submission, only if lurk mode is enabled
-    //it's in a separate function because it is shared between the first provisional connection 
-    //and the "real" one later
+    //it's in a separate function because it is shared between the first 
+    //provisional connection (earlier)
+    //and the "real" one here
     socket.on('nameValidation', nameValidationCallBack);
 
 
@@ -888,6 +927,7 @@ function newGame() {
     //when the client realizes it's being disconnected
     socket.on('disconnect', function () {
         //console.log("OH NO");
+	// lol
     });
 
     //server forces refresh (on disconnect or to force load a new version of the client)
@@ -976,12 +1016,12 @@ function update() {
         }
 
 	// click and drag to pan camera
-	// if (isPanning) {
-	//   let dx = mouseX - pmouseX;
-	//   camera.position.x += -dx;
-	//   let dy = mouseY - pmouseY;
-	//   camera.position.y += -dy;
-	// }
+	if (isPanning) {
+	  let dx = mouseX - pmouseX;
+	  camera.position.x += -dx;
+	  let dy = mouseY - pmouseY;
+	  camera.position.y += -dy;
+	}
 
 
 
@@ -1124,7 +1164,7 @@ function update() {
             logoCounter += deltaTime;
 
 	    // we draw ui without camera
-	    camera.off()
+	    camera.off();
             textAlign(CENTER, BASELINE);
 	    textFont(font, FONT_SIZE);
 
@@ -1132,7 +1172,8 @@ function update() {
             fill(255);
 	    stroke(0);
 	    strokeWeight(1);
-	    text('active now', WIDTH/2, HEIGHT/2);
+	    text('longing', WIDTH/2, HEIGHT/2);
+	    camera.on();
 	    
             // animation(logo, floor(width / 2), floor(height / 2));
         }
@@ -1294,17 +1335,16 @@ function Player(p) {
 
     console.log('color is ' + this.color);
 
-    // TODO: tint the sprite a random color
-    this.avatarSprite = tintGraphics(avatarBaseSprite, this.color);
-    
-    this.sprite.addImage('default', this.avatarSprite);
-    
 
 
-    if (this.nickName == "")
+    if (this.nickName == "") {
         this.sprite.mouseActive = false;
-    else
+    }
+    else {
+	this.avatarSprite = tintGraphics(avatarBaseSprite, this.color);
+    	this.sprite.addImage('default', this.avatarSprite);
         this.sprite.mouseActive = true;
+    }
 
     //this.sprite.debug = true;
 
@@ -1315,12 +1355,12 @@ function Player(p) {
     this.sprite.roomId = p.room; //sure anything goes
 
     //save the dominant color for bubbles and rollover label
-    var c = color(this.color)
+    // var c = color(this.color)
 
-    if (brightness(c) > 30)
-        this.sprite.labelColor = color(this.color)
-    else
-        this.sprite.labelColor = color(this.color)
+    // if (brightness(c) > 30)
+    //     this.sprite.labelColor = color(this.color)
+    // else
+    //     this.sprite.labelColor = color(this.color)
 
     this.room = p.room;
     this.x = p.x;
@@ -1393,12 +1433,12 @@ function Bubble(pid, message, col, x, y, oy) {
     this.message = message;
 
     //the color is the 3rd color in the palette unless too dark, in that case it's the second
-    var c = color(AVATAR_PALETTES[col][2]);
+    // var c = color(AVATAR_PALETTES[col][2]);
 
-    if (brightness(c) > 30)
-        this.color = color(AVATAR_PALETTES[col][2]);
-    else
-        this.color = color(AVATAR_PALETTES[col][3]);
+    // if (brightness(c) > 30)
+    //     this.color = color(AVATAR_PALETTES[col][2]);
+    // else
+    //     this.color = color(AVATAR_PALETTES[col][3]);
 
     this.orphan = false;
     this.counter = BUBBLE_TIME;
@@ -1554,7 +1594,6 @@ function mouseMoved() {
     }
 }
 
-//stop emoting
 function canvasPressed() {
 
     if (nickName != "" && screen == "game") {
@@ -2071,18 +2110,17 @@ function preventBehavior(e) {
     e.preventDefault();
 };
 
-// TODO: uncomment when done with testing/dev
-// document.addEventListener("touchmove", preventBehavior, { passive: false });
-// 
-// // Active
-// window.addEventListener('focus', function () {
-//     if (socket != null && me != null)
-//         socket.emit('focus', { room: me.room });
-// });
-// 
-// // Inactive
-// window.addEventListener('blur', function () {
-//     if (socket != null && me != null)
-//         socket.emit('blur', { room: me.room });
-// });
-// 
+document.addEventListener("touchmove", preventBehavior, { passive: false });
+
+// Active
+window.addEventListener('focus', function () {
+    if (socket != null && me != null)
+        socket.emit('focus', { room: me.room });
+});
+
+// Inactive
+window.addEventListener('blur', function () {
+    if (socket != null && me != null)
+        socket.emit('blur', { room: me.room });
+});
+

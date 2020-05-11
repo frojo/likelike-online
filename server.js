@@ -72,8 +72,11 @@ if (process.env.ADMINS != null)
 //We want the server to keep track of the whole game state
 //in this case the game state are the attributes of each player
 var gameState = {
-    players: {}
+    players: {},
 }
+
+// for calculating the position of the new player
+var mostRecentPlayerPos = {x: 0, y: 0};
 
 //a collection of banned IPs
 //not permanent, it lasts until the server restarts
@@ -113,8 +116,26 @@ io.on('connection', function (socket) {
     //this appears in the terminal
     console.log('A user connected');
 
+
+    // 
+    //if running locally it's not gonna work
+    var IP = "";
+    //oh look at this beautiful socket.io to get an goddamn ip address
+    if (socket.handshake.headers != null)
+        if (socket.handshake.headers["x-forwarded-for"] != null) {
+  	  IP = socket.handshake.headers["x-forwarded-for"].split(",")[0];
+        }
+
+    // check if we already know this player
+    let relog = false;
+    let oldID = idByIP(IP);
+    // we only count *real* people, not lurker sheeple
+    if (oldID != null && gameState.players[oldID].nickName != "") {
+        relog = true;
+    }
+
     //this is sent to the client upon connection
-    socket.emit('serverWelcome', VERSION, DATA);
+    socket.emit('serverWelcome', VERSION, DATA, relog);
 
     //wait for the player to send their name and info, then broadcast them
     socket.on('join', function (playerInfo) {
@@ -160,6 +181,13 @@ io.on('connection', function (socket) {
 
             }
 
+	    // check if we already know this player
+	    let isRelogging = false;
+	    let oldID = idByIP(IP);
+	    // we only count *real* people, not lurker sheeple
+	    if (oldID != null && gameState.players[oldID].nickName != "") {
+		isRelogging = true;
+	    }
 
             if (isBanned) {
 
@@ -174,6 +202,25 @@ io.on('connection', function (socket) {
                 socket.emit("errorMessage", "The server is full, please try again later.");
                 socket.disconnect();
             }
+	    // this person is re-logging in (we remember their IP)
+	    else if (isRelogging) {
+		  // since gameState indexes players by socket id, and we have 
+		  // a new socket for this player, make a new one with updated
+		  // id and delete index for the old player
+		  let player = gameState.players[oldID];
+		  console.log('Player ' + player.nickName + ' is relogging in');
+		  console.log('old id: ' + player.id + ', new id: ', socket.id);
+		  player.id = socket.id;
+		  gameState.players[socket.id] = player;
+	      	  delete gameState.players[oldID];
+		  
+		  console.log('about to send playerjoined to room ' + player.room);
+		  // have the new socket join the player's old room
+                  socket.join(player.room, function () {
+                      //console.log(socket.rooms);
+                  });
+                  io.to(player.room).emit('playerJoined', player); 
+	    }
             else {
 
                 //if client hacked truncate
@@ -200,8 +247,20 @@ io.on('connection', function (socket) {
                     if (val == 2)
                         console.log(playerInfo.nickName + " joins as admin");
 
+		    let position;
+                    if (playerInfo.nickName == "") {
+		      // lurkers haven't really manifested in the world yet
+		      // so just give them a provisional position
+		      position = randomPointOnCircle(mostRecentPlayerPos, 200);
+		    } else {
+		      position = newPlayerPosition();
+		    }
+
+		    print('new player ' + playerInfo.nickName + '\'s position = ' + position.x + ', ' + position.y);
+
                     //the player objects on the client will keep track of the room
-                    var newPlayer = { id: socket.id, nickName: filter.clean(playerInfo.nickName), color: playerInfo.color, room: playerInfo.room, avatar: playerInfo.avatar, x: playerInfo.x, y: playerInfo.y };
+		    
+                    var newPlayer = { id: socket.id, nickName: filter.clean(playerInfo.nickName), color: playerInfo.color, room: playerInfo.room, avatar: playerInfo.avatar, x: position.x, y: position.y };
 
                     //save the same information in my game state
                     gameState.players[socket.id] = newPlayer;
@@ -245,16 +304,22 @@ io.on('connection', function (socket) {
         }
     });
 
-    //when a client disconnects I have to delete its player object
-    //or I would end up with ghost players
+    //when a client disconnects we just mark them inactive 
     socket.on('disconnect', function () {
         try {
             console.log("Player disconnected " + socket.id);
-            io.sockets.emit('playerLeft', { id: socket.id, disconnect: true });
-            //send the disconnect
-            //delete the player object
-            delete gameState.players[socket.id];
-            console.log("There are now " + Object.keys(gameState.players).length + " players on this server");
+
+	    let player = gameState.players[socket.id];
+	    if (player != null) {
+	      // if it was just a lurker, delete them
+	      if (player.nickname == "") {
+	        delete gameState.players[socket.id];
+	      } 
+	      // but if it's a real boy, just mark them inactive
+	      else {
+	        io.sockets.emit('playerInactive', { id: socket.id});
+	      }
+	    }
         }
         catch (e) {
             console.log("Error on disconnect, object malformed from" + socket.id + "?");
@@ -479,6 +544,47 @@ setInterval(function () {
 }, 1000);
 
 
+// bias towards being near people that recently logged on for the first time
+// returns an object with properties x and y
+function newPlayerPosition() {
+  let newPos;
+
+  // todo: what if it can't find it 100 tries?
+  // probably means there's no feasible location, pick a new
+  // random player to try from. although that could get slow... imagine
+  // a circular blob of players. we'd pickj
+  // what if we go from most recent to lea
+  for (let i = 0; i < 100; i++) {
+    newPos = randomPointOnCircle(mostRecentPlayerPos, 200);
+    if (validatePosition(newPos)) {
+      break;
+    }
+  }
+  
+  mostRecentPlayerPos = newPos;
+  return newPos;
+}
+
+
+function randomPointOnCircle(center, r) {
+  let theta = Math.random() * 2*Math.PI;
+  return {x: center.x + r*Math.cos(theta),
+	  y: center.y + r*Math.sin(theta)};
+}
+
+// check if we can spawn a player at this position
+function validatePosition(pos) {
+  // check that a sprite at this position wouldn't ovelap with any others
+  // could loop over all the current players. that would be linear...
+  // maybe could use p5.play's collision detection stuff
+  //
+  // could probably do something fancy with subdividing the area and using
+  // like a quad tree datastructure
+  // i guess that would make it logn 
+  return true;
+}
+
+
 
 function validateName(nn) {
 
@@ -640,6 +746,18 @@ function adminCommand(adminSocket, str) {
         console.log("Error admin command");
         console.error(e);
     }
+}
+
+function idByIP(ip) {
+    var i = null;
+    for (var id in gameState.players) {
+        if (gameState.players.hasOwnProperty(id)) {
+            if (gameState.players[id].IP == ip) {
+                i = id;
+            }
+        }
+    }
+    return i;
 }
 
 //admin functions, the admin exists in the client frontend so they don't have access to ip and id of other users
