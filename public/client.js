@@ -636,23 +636,9 @@ function newGame() {
 
                 }//it me
                 else {
-                    //
+		    
+		    // register new player
                     players[p.id] = new Player(p);
-
-                    //console.log("I shall introduce myself to " + p.id);
-
-                    //If I'm not the new player send an introduction to the new player
-                    socket.emit('intro', p.id, {
-                        id: socket.id,
-                        nickName: me.nickName,
-                        color: me.color,
-                        avatar: me.avatar,
-                        room: me.room,
-                        x: me.x,
-                        y: me.y,
-                        destinationX: me.destinationX,
-                        destinationY: me.destinationY
-                    });
                 }
 
                 if (p.new && p.nickName != "" && firstLog) {
@@ -683,19 +669,18 @@ function newGame() {
         }
     );
 
-    //each existing player sends me an object with their parameters
-    socket.on('onIntro',
-        function (p) {
-            try {
-                //console.log("Hello newcomer I'm " + p.nickName + " " + p.id);
-                players[p.id] = new Player(p);
-                console.log("There are now " + Object.keys(players).length + " players in this room");
-            } catch (e) {
-                console.log("Error on onIntro");
-                console.error(e);
-            }
-        }
-    );
+    // for whenever a player's state should be updated
+    socket.on('playerUpdateState',
+	function(p) {
+	  try {
+	      console.log('getting udpated state on ' + p.id);
+	      players[p.id] = new Player(p);
+	  } catch (e) {
+	      console.log('Error on playerUpdateState');
+	      console.error(e)
+	  }
+    });
+
 
     // when a player reopens the page
     socket.on('playerRejoined',
@@ -712,26 +697,6 @@ function newGame() {
             }
         }
     );
-
-
-
-    //when somebody clicks to move, update the destination (not the position)
-    socket.on('playerMoved',
-        function (p) {
-            try {
-                //console.log(p.id + " moves to: " + p.destinationX + " " + p.destinationY);
-
-                //make sure the player exists
-                if (players.hasOwnProperty(p.id)) {
-
-                    players[p.id].destinationX = p.destinationX;
-                    players[p.id].destinationY = p.destinationY;
-                }
-            } catch (e) {
-                console.log("Error on playerMoved");
-                console.error(e);
-            }
-        });
 
     //when somebody disconnects/leaves focus from their window
     socket.on('playerInactive',
@@ -790,44 +755,6 @@ function newGame() {
 
             } catch (e) {
                 console.log("Error on playerLeft");
-                console.error(e);
-            }
-        }
-    );
-
-
-
-    //when somebody talks
-    socket.on('playerTalked',
-        function (p) {
-            try {
-
-                //console.log("new message from " + p.id + ": " + p.message + " color " + p.color);
-
-                //make sure the player exists in the client
-                if (players.hasOwnProperty(p.id)) {
-
-                    if (!players[p.id].ignore) {
-                        //minimum y of speech bubbles depends on room, typically higher half
-                        var offY = ROOMS[me.room].bubblesY * ASSET_SCALE;
-                        var newBubble = new Bubble(p.id, p.message, p.color, p.x, p.y, offY);
-
-                        //calling a custom function 
-                        if (window[me.room + "Talk"] != null) {
-                            window[me.room + "Talk"](p.id, newBubble);
-                        }
-
-                        pushBubbles(newBubble);
-                        bubbles.push(newBubble);
-
-                        if (SOUND) {
-                            blips[floor(random(0, blips.length))].play();
-                        }
-
-                    }
-                }
-            } catch (e) {
-                console.log("Error on playerTalked");
                 console.error(e);
             }
         }
@@ -1416,6 +1343,13 @@ function Player(p) {
 
     // this.stopWalkingAnimation();
     this.sprite.changeImage('default');
+
+
+    // is this player currently logged on?
+    this.active = p.active;
+    
+    // seconds of inactivity
+    this.inactive_for = this.inactive_for;
 }
 
 
@@ -1424,119 +1358,6 @@ function deleteAllSprites() {
     allSprites.removeSprites();
 }
 
-//speech bubble object
-function Bubble(pid, message, col, x, y, oy) {
-    //always starts at row zero
-
-    this.row = 0;
-    this.pid = pid;
-    this.message = message;
-
-    //the color is the 3rd color in the palette unless too dark, in that case it's the second
-    // var c = color(AVATAR_PALETTES[col][2]);
-
-    // if (brightness(c) > 30)
-    //     this.color = color(AVATAR_PALETTES[col][2]);
-    // else
-    //     this.color = color(AVATAR_PALETTES[col][3]);
-
-    this.orphan = false;
-    this.counter = BUBBLE_TIME;
-
-    //to fix an inexplicable bug that mangles bitmap text on small textfields
-    //I scale short messages
-    this.fontScale = 1;
-    if (message.length < 4) {
-        this.fontScale = 2;
-        this.message = this.message.toUpperCase();
-    }
-
-
-    textFont(font, FONT_SIZE * this.fontScale);
-    textAlign(LEFT, BASELINE);
-    this.tw = textWidth(this.message);
-    //whole bubble with frame
-    this.w = round(this.tw + TEXT_PADDING * 2);
-    this.h = round(TEXT_H + TEXT_PADDING * 2 * this.fontScale);
-
-    //save the original player position so I can render a line as long as they are not moving
-    this.px = round(x);
-    this.py = round(y);
-
-    this.offY = oy;
-
-    this.x = round(this.px - this.w / 2);
-    if (this.x + this.w + BUBBLE_MARGIN > width) {
-        this.x = width - this.w - BUBBLE_MARGIN
-    }
-    if (this.x < BUBBLE_MARGIN) {
-        this.x = BUBBLE_MARGIN;
-    }
-
-
-    this.update = function () {
-        this.counter -= deltaTime / 1000;
-
-        noStroke();
-        textFont(font, FONT_SIZE * this.fontScale);
-        textAlign(LEFT, BASELINE);
-        rectMode(CORNER);
-        fill(UI_BG);
-        this.y = this.offY - floor((TEXT_H + TEXT_PADDING * 2 + BUBBLE_MARGIN) * this.row);
-        rect(this.x, this.y, this.w + 1, this.h);
-        fill(this.color);
-        text(this.message, floor(this.x + TEXT_PADDING) + 1, floor(this.h + this.y - TEXT_PADDING));
-
-    }
-}
-
-//move bubbles up if necessary
-function pushBubbles(b) {
-
-    //go through bubbles
-    for (var i = 0; i < bubbles.length; i++) {
-        if (bubbles[i] != b && bubbles[i].row == b.row) {
-            //this bubble is on the same row, will they overlap?
-            if (b.x < (bubbles[i].x + bubbles[i].w) && (b.x + b.w) > bubbles[i].x) {
-                bubbles[i].row++;
-                pushBubbles(bubbles[i]);
-                //if off screen mark for deletion
-                if (bubbles[i].y - bubbles[i].h < 0)
-                    bubbles[i].counter = -1;
-            }
-
-        }
-    }
-}
-
-
-
-function isObstacle(x, y, room, a) {
-    var obs = true;
-
-    if (room != null && a != null) {
-
-        //you know, at this point I'm not sure if you are using assets scaled by 2 for the areas
-        //so I'm just gonna stretch the coordinates ok
-        var px = floor(map(x, 0, WIDTH, 0, a.width));
-        var py = floor(map(y, 0, HEIGHT, 0, a.height));
-
-        var c1 = a.get(px, py);
-
-        //if not white check if color is obstacle
-        if (c1[0] != 255 || c1[1] != 255 || c1[2] != 255) {
-            var cmd = getCommand(c1, room);
-
-            if (cmd != null)
-                if (cmd.obstacle != null)
-                    obs = cmd.obstacle;
-        }
-        else
-            obs = false; //if white
-
-    }
-    return obs;
-}
 
 //on mobile there is no rollover so allow a drag to count as mouse move
 //the two functions SHOULD be mutually exclusive
