@@ -47,8 +47,6 @@ var MAX_NAME_LENGTH = 16;
 
 //cap the overall players 
 var MAX_PLAYERS = -1;
-//refuse people when a room is full 
-var MAX_PLAYERS_PER_ROOM = 200;
 
 // players who rejoin are remembered (only turn off for debugging)
 var REMEMBER_IPS = false;
@@ -119,8 +117,6 @@ io.on('connection', function (socket) {
     //this appears in the terminal
     console.log('A user connected');
 
-
-    // 
     //if running locally it's not gonna work
     var IP = "";
     //oh look at this beautiful socket.io to get an goddamn ip address
@@ -162,13 +158,6 @@ io.on('connection', function (socket) {
             else
                 console.log("New user joined the game: " + playerInfo.nickName + " avatar# " + playerInfo.avatar + " color# " + playerInfo.color + " " + socket.id);
 
-            var roomPlayers = 1;
-            var myRoom = io.sockets.adapter.rooms[playerInfo.room];
-            if (myRoom != undefined) {
-                roomPlayers = myRoom.length + 1;
-                console.log("There are now " + roomPlayers + " users in " + playerInfo.room);
-            }
-
             var serverPlayers = Object.keys(io.sockets.connected).length + 1;
 
             var isBanned = false;
@@ -202,9 +191,9 @@ io.on('connection', function (socket) {
             else if (gameState.players[socket.id] != null) {
                 console.log("ATTENTION: there is already a player associated to the socket " + socket.id);
             }
-            else if ((serverPlayers > MAX_PLAYERS && MAX_PLAYERS != -1) || (roomPlayers > MAX_PLAYERS_PER_ROOM && MAX_PLAYERS_PER_ROOM != -1)) {
+            else if (serverPlayers > MAX_PLAYERS && MAX_PLAYERS != -1) {
                 //limit the number of players
-                console.log("ATTENTION: " + playerInfo.room + " reached maximum capacity");
+                console.log("ATTENTION: server has reached maximum capacity");
                 socket.emit("errorMessage", "The server is full, please try again later.");
                 socket.disconnect();
             }
@@ -220,11 +209,7 @@ io.on('connection', function (socket) {
 		  gameState.players[socket.id] = player;
 	      	  delete gameState.players[oldID];
 		  
-		  // have the new socket join the player's old room
-                  socket.join(player.room, function () {
-                      //console.log(socket.rooms);
-                  });
-                  io.to(player.room).emit('playerJoined', player); 
+                  io.emit('playerJoined', player); 
 	    }
             else {
 
@@ -262,9 +247,8 @@ io.on('connection', function (socket) {
 		    }
 
 		    print('new player ' + playerInfo.nickName + '\'s position = ' + position.x + ', ' + position.y);
-                    //the player objects on the client will keep track of the room
 		    
-                    var newPlayer = { id: socket.id, nickName: filter.clean(playerInfo.nickName), color: playerInfo.color, room: playerInfo.room, avatar: playerInfo.avatar, x: position.x, y: position.y, active: true, inactive_for: 0};
+                    var newPlayer = { id: socket.id, nickName: filter.clean(playerInfo.nickName), color: playerInfo.color, avatar: playerInfo.avatar, x: position.x, y: position.y, active: true, inactive_for: 0};
 
                     //save the same information in my game state
                     gameState.players[socket.id] = newPlayer;
@@ -279,11 +263,6 @@ io.on('connection', function (socket) {
                     gameState.players[socket.id].floodCount = 0;
 		    
 
-                    //send the user to the default room
-                    socket.join(playerInfo.room, function () {
-                        //console.log(socket.rooms);
-                    });
-
                     newPlayer.new = true;
 
                     //let's not count lurkers
@@ -291,14 +270,10 @@ io.on('connection', function (socket) {
                         visits++;
 
                     //check if there is a custom function in the MOD to call at this point
-                    if (MOD["joinGame"] != null) {
-                        //call it!
-                        MOD["joinGame"](newPlayer, playerInfo.room);
-                    }
 
                     //send all players information about the new player
                     //upon creation destination and position are the same 
-                    io.to(playerInfo.room).emit('playerJoined', newPlayer);
+                    io.emit('playerJoined', newPlayer);
 
 		    //send info about all players to this player
 		    for (var id in gameState.players) {
@@ -369,7 +344,7 @@ io.on('connection', function (socket) {
     socket.on('focus', function (obj) {
         try {
             //console.log(socket.id + " back from AFK");
-            io.to(obj.room).emit('playerFocused', socket.id);
+            io.emit('playerFocused', socket.id);
         } catch (e) {
             console.log("Error on focus " + socket.id + "?");
             console.error(e);
@@ -379,7 +354,7 @@ io.on('connection', function (socket) {
     socket.on('blur', function (obj) {
         try {
             //console.log(socket.id + " is AFK");
-            io.to(obj.room).emit('playerBlurred', socket.id)
+            io.emit('playerBlurred', socket.id)
         } catch (e) {
             console.log("Error on blur " + socket.id + "?");
             console.error(e);
