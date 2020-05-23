@@ -10,14 +10,6 @@ ADMINS=username1|pass1,username2|pass2
 PORT = 3000
 */
 
-var MOD = {};
-//load server side mod file
-try {
-    MOD = require('./serverMod');
-}
-catch (e) {
-}
-
 var port = process.env.PORT || 3000;
 
 //number of emits per second allowed for each player, after that ban the IP.
@@ -269,7 +261,6 @@ io.on('connection', function (socket) {
                     if (playerInfo.nickName != "")
                         visits++;
 
-                    //check if there is a custom function in the MOD to call at this point
 
                     //send all players information about the new player
                     //upon creation destination and position are the same 
