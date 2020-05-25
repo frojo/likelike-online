@@ -201,7 +201,7 @@ io.on('connection', function (socket) {
 		  gameState.players[socket.id] = player;
 	      	  delete gameState.players[oldID];
 		  
-                  io.emit('playerJoined', player); 
+                  io.sockets.emit('playerJoined', player); 
 	    }
             else {
 
@@ -264,7 +264,7 @@ io.on('connection', function (socket) {
 
                     //send all players information about the new player
                     //upon creation destination and position are the same 
-                    io.emit('playerJoined', newPlayer);
+                    io.sockets.emit('playerJoined', newPlayer);
 
 		    //send info about all players to this player
 		    for (var id in gameState.players) {
@@ -299,13 +299,13 @@ io.on('connection', function (socket) {
 	    let player = gameState.players[socket.id];
 	    if (player != null) {
 	      // if it was just a lurker, delete them
-	      if (player.nickname == "") {
-		console.log("deleted " + socket.id);
+	      if (player.nickName == "") {
 	        delete gameState.players[socket.id];
 	      } 
 	      // but if it's a real boy, just mark them inactive
 	      else {
-	        io.sockets.emit('playerInactive', { id: socket.id});
+		player.active = false;
+	        io.sockets.emit('playerUpdateState', player);
 	      }
 	    }
         }
@@ -335,7 +335,7 @@ io.on('connection', function (socket) {
     socket.on('focus', function (obj) {
         try {
             //console.log(socket.id + " back from AFK");
-            io.emit('playerFocused', socket.id);
+            io.sockets.emit('playerFocused', socket.id);
         } catch (e) {
             console.log("Error on focus " + socket.id + "?");
             console.error(e);
@@ -345,7 +345,7 @@ io.on('connection', function (socket) {
     socket.on('blur', function (obj) {
         try {
             //console.log(socket.id + " is AFK");
-            io.emit('playerBlurred', socket.id)
+            io.sockets.emit('playerBlurred', socket.id)
         } catch (e) {
             console.log("Error on blur " + socket.id + "?");
             console.error(e);

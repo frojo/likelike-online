@@ -543,7 +543,6 @@ function newGame() {
                 p.destinationX = p.x;
                 p.destinationY = p.y;
 
-		console.log('o a player joined...');
                 //if it's me///////////
                 if (socket.id == p.id) {
                     rolledSprite = null;
@@ -605,7 +604,8 @@ function newGame() {
     socket.on('playerUpdateState',
 	function(p) {
 	  try {
-	      console.log('getting udpated state on ' + p.id);
+	      console.log('getting updated state on ' + p.id);
+	      console.log('active = ' + p.active);
 	      players[p.id] = new Player(p);
 	  } catch (e) {
 	      console.log('Error on playerUpdateState');
@@ -766,15 +766,18 @@ function newGame() {
 
     //player is AFK
     socket.on('playerBlurred', function (id) {
+	console.log('not blurring player ' + id);
 
-        if (players[id] != null)
-            players[id].sprite.transparent = true;
+        // if (players[id] != null)
+        //     players[id].sprite.transparent = true;
     });
 
     //player is not AFK
     socket.on('playerFocused', function (id) {
-        if (players[id] != null)
-            players[id].sprite.transparent = false;
+	console.log('not focusing player ' + id);
+
+        // if (players[id] != null)
+        //     players[id].sprite.transparent = false;
 
     });
 
@@ -985,7 +988,7 @@ function update() {
             fill(255);
 	    stroke(0);
 	    strokeWeight(1);
-	    text('i\'m here', WIDTH/2, HEIGHT/2);
+	    text('souls', WIDTH/2, HEIGHT/2);
 	    camera.on();
 	    
             // animation(logo, floor(width / 2), floor(height / 2));
@@ -1138,15 +1141,22 @@ function avatarSelection() {
 
 //copy the properties
 function Player(p) {
+    console.log('creating Player object for ' + p.id);
     this.id = p.id;
     this.nickName = p.nickName;
     this.color = p.color;
     this.avatar = p.avatar;
     this.ignore = false;
 
+    // is this player currently logged on?
+    this.active = p.active;
+    
+    // seconds of inactivity
+    this.inactive_for = this.inactive_for;
+
     this.sprite = createSprite(100, 100);
 
-    console.log('color is ' + this.color);
+    console.log('creating Player: color is ' + this.color);
 
 
 
@@ -1164,7 +1174,7 @@ function Player(p) {
     //no parent in js? WHAAAAT?
     this.sprite.id = this.id;
     this.sprite.label = p.nickName;
-    this.sprite.transparent = false;
+    this.sprite.transparent = !this.active;
 
     //save the dominant color for bubbles and rollover label
     // var c = color(this.color)
@@ -1206,7 +1216,6 @@ function Player(p) {
     }
     //ugly as fuck but javascript made me do it
     this.sprite.originalDraw = this.sprite.draw;
-
     this.sprite.draw = function () {
 
         if (!this.ignore) {
@@ -1224,11 +1233,6 @@ function Player(p) {
     this.sprite.changeImage('default');
 
 
-    // is this player currently logged on?
-    this.active = p.active;
-    
-    // seconds of inactivity
-    this.inactive_for = this.inactive_for;
 }
 
 
