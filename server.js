@@ -333,9 +333,11 @@ io.on('connection', function (socket) {
 
     //user afk
     socket.on('focus', function (obj) {
+	// todo: change activeness
         try {
-            //console.log(socket.id + " back from AFK");
-            io.sockets.emit('playerFocused', socket.id);
+	    let player = gameState.players[socket.id];
+	    player.active = true;
+	    io.sockets.emit('playerUpdateState', player);
         } catch (e) {
             console.log("Error on focus " + socket.id + "?");
             console.error(e);
@@ -343,9 +345,11 @@ io.on('connection', function (socket) {
     });
 
     socket.on('blur', function (obj) {
+	// todo: change activeness
         try {
-            //console.log(socket.id + " is AFK");
-            io.sockets.emit('playerBlurred', socket.id)
+	    let player = gameState.players[socket.id];
+	    player.active = false;
+	    io.sockets.emit('playerUpdateState', player);
         } catch (e) {
             console.log("Error on blur " + socket.id + "?");
             console.error(e);
