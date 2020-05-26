@@ -604,9 +604,20 @@ function newGame() {
     socket.on('playerUpdateState',
 	function(p) {
 	  try {
-	      console.log('getting updated state on ' + p.id);
-	      console.log('active = ' + p.active);
-	      players[p.id] = new Player(p);
+	    console.log('getting updated state on ' + p.id);
+	    console.log('active = ' + p.active);
+
+	    // remove the old sprite before overwriting player entry
+	    // (if there is one)
+	    if (players[p.id] && players[p.id].sprite != null) {
+	      if (players[p.id].sprite == rolledSprite) {
+                rolledSprite = null;
+	      }
+	      removeSprite(players[p.id].sprite);
+	    }
+	    
+	    // overwrite player entry
+	    players[p.id] = new Player(p);
 	  } catch (e) {
 	      console.log('Error on playerUpdateState');
 	      console.error(e)
@@ -629,64 +640,6 @@ function newGame() {
             }
         }
     );
-
-    //when somebody disconnects/leaves focus from their window
-    socket.on('playerInactive',
-        function (p) {
-            try {
-	      // todo: blur them out?
-	      // todo: mark them inactive (and start some time)
-	      // how do we know and get other people to know how
-	      // long since it's been since we've been active?
-	      // did they disconnect or leave focuse? we probably don't care
-	      console.log('Player ' + p.id + ' is inactive')
-	      
-            } catch (e) {
-                console.log("Error on playerLeft");
-                console.error(e);
-            }
-        }
-    );
-
-
-    //when somebody disconnects/leaves 
-    socket.on('playerLeft',
-        function (p) {
-            try {
-                console.log("Player " + p.id + " left");
-
-                if (players[p.id] != null) {
-
-                    if (p.disconnect && players[p.id].nickName != "") {
-                        var spark = createSprite(players[p.id].x, players[p.id].y - AVATAR_H + 1);
-                        spark.addAnimation("spark", disappearEffect);
-                        spark.scale = ASSET_SCALE;
-                        spark.life = 60;
-                        if (SOUND)
-                            disappearSound.play();
-                    }
-
-                    if (players[p.id].sprite != null) {
-                        if (players[p.id].sprite == rolledSprite) {
-                            rolledSprite = null;
-                        }
-
-                        removeSprite(players[p.id].sprite);
-                    }
-
-
-                }
-
-                delete players[p.id];
-                console.log("There are now " + Object.keys(players).length + " players");
-
-            } catch (e) {
-                console.log("Error on playerLeft");
-                console.error(e);
-            }
-        }
-    );
-
 
 
     //displays a message upon connection refusal (server full etc)
@@ -766,7 +719,7 @@ function newGame() {
 
     //player is AFK
     socket.on('playerBlurred', function (id) {
-	console.log('not blurring player ' + id);
+	// console.log('not blurring player ' + id);
 
         // if (players[id] != null)
         //     players[id].sprite.transparent = true;
@@ -774,7 +727,7 @@ function newGame() {
 
     //player is not AFK
     socket.on('playerFocused', function (id) {
-	console.log('not focusing player ' + id);
+	// console.log('not focusing player ' + id);
 
         // if (players[id] != null)
         //     players[id].sprite.transparent = false;
@@ -1490,69 +1443,6 @@ function keyPressed() {
         var field = document.getElementById("lobby-field");
         field.focus();
     }
-}
-
-//when I hits send
-function talk(msg) {
-
-    if (AFK) {
-        AFK = false;
-        if (socket != null && me != null)
-            socket.emit('focus', { });
-    }
-
-    if (msg.replace(/\s/g, '') != "" && nickName != "") {
-
-        var command = commandLine(msg)
-
-        if (!command)
-            socket.emit('talk', { message: msg, color: me.color, x: me.x, y: me.y });
-    }
-}
-
-//client side command line
-function commandLine(msg) {
-    var found = false;
-
-    switch (msg.toLowerCase()) {
-        case "/sound off":
-            SOUND = false;
-            found = true;
-            break;
-        case "/sound on":
-            SOUND = true;
-            found = true;
-            break;
-        case "/afk":
-            if (socket != null && me != null)
-                socket.emit('blur', { });
-
-            AFK = true;
-            found = true;
-            break;
-
-    }
-
-    return found;
-}
-
-//called by the talk button in the html
-function getTalkInput() {
-
-    var time = new Date().getTime();
-
-    if (time - lastMessage > SETTINGS.ANTI_SPAM) {
-
-        // Selecting the input element and get its value 
-        var inputVal = document.getElementById("chatField").value;
-        //sending it to the talk function in sketch
-        talk(inputVal);
-        document.getElementById("chatField").value = "";
-        //save time
-        lastMessage = time;
-    }
-    //prevent page from refreshing (default form behavior)
-    return false;
 }
 
 //called by the continue button in the html
