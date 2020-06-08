@@ -11,7 +11,7 @@ var VERSION = "1.0";
 
 //for testing purposes I can skip the login phase
 //and join with a random avatar
-var QUICK_LOGIN = false;
+var QUICK_LOGIN = true;
 
 //true: preview the game as invisible user
 //false: go directly to the login without previewing the room
@@ -59,10 +59,12 @@ var ASSETS_FOLDER = "assets/";
 //MONOSPACED FONT
 //thank you https://datagoblin.itch.io/monogram
 var FONT_FILE = "assets/monogram_extended.ttf";
-var FONT_SIZE = 64; //to avoid blur
+var FONT_SIZE = 64;
+var ACTIVE_FONT_SIZE = 32;
+var ACTIVE_TEXT_H = 8;
 var font;
 var TEXT_H = 8;
-var TEXT_PADDING = 3;
+var TEXT_PADDING = 12;
 var TEXT_LEADING = TEXT_H + 4;
 
 var LOGO_FILE = "logo.png";
@@ -233,7 +235,6 @@ Things are quite asynchronous here. This is the startup sequence:
 * changing room is handled in the same way with "playerJoined"
 * if server restarts the assets and room data is kept on the clients and that's also a connect > playerJoined sequence
 */
-
 
 
 //setup is called when all the assets have been loaded
@@ -564,7 +565,9 @@ function newGame() {
                     */
 
                     //click on me = emote
-                    me.sprite.onMousePressed = function () { socket.emit('emote', { em: true }); };
+                    me.sprite.onMousePressed = function () { 
+		      console.log('emote!!!');
+		      socket.emit('test', { }); };
                     me.sprite.onMouseReleased = function () { socket.emit('emote', { em: false }); };
 
 
@@ -604,9 +607,6 @@ function newGame() {
     socket.on('playerUpdateState',
 	function(p) {
 	  try {
-	    console.log('getting updated state on ' + p.id);
-	    console.log('active = ' + p.active);
-
 	    // remove the old sprite before overwriting player entry
 	    // (if there is one)
 	    if (players[p.id] && players[p.id].sprite != null) {
@@ -616,8 +616,11 @@ function newGame() {
 	      removeSprite(players[p.id].sprite);
 	    }
 	    
-	    // overwrite player entry
-	    players[p.id] = new Player(p);
+	    let player = new Player(p);
+	    if (p.id == me.id) {
+	      me = player;
+	    }
+	    players[p.id] = player;
 	  } catch (e) {
 	      console.log('Error on playerUpdateState');
 	      console.error(e)
@@ -717,23 +720,6 @@ function newGame() {
         }
     );
 
-    //player is AFK
-    socket.on('playerBlurred', function (id) {
-	// console.log('not blurring player ' + id);
-
-        // if (players[id] != null)
-        //     players[id].sprite.transparent = true;
-    });
-
-    //player is not AFK
-    socket.on('playerFocused', function (id) {
-	// console.log('not focusing player ' + id);
-
-        // if (players[id] != null)
-        //     players[id].sprite.transparent = false;
-
-    });
-
     //when the client realizes it's being disconnected
     socket.on('disconnect', function () {
         //console.log("OH NO");
@@ -828,14 +814,9 @@ function update() {
 	  camera.position.y += -dy;
 	}
 
-
-
         drawSprites();
 
         //GUI
-        if (nickName != "" && rolledSprite == null && areaLabel == "")
-            animation(walkIcon, floor(mouseX + 6), floor(mouseY - 6));
-
         var label = areaLabel;
         var labelColor = LABEL_NEUTRAL_COLOR;
 
@@ -845,35 +826,49 @@ function update() {
 
         //player and sprites label override areas
         if (rolledSprite != null) {
-            if (rolledSprite.label != null && rolledSprite.label != "") {
-                label = rolledSprite.label + ((rolledSprite.transparent) ? "[AFK]" : "");
-            }
-
-            if (rolledSprite.labelColor != null) {
-                labelColor = rolledSprite.labelColor;
-            }
+	  let player = players[rolledSprite.id];
+	  label = 'active ' + player.inactive_for + ' ago';
         }
 
-        //by no circumstance show you name as label
+        //by no circumstance show your name as label
         if (me != null)
-            if (label == me.nickName)
+            if (rolledSprite == me.sprite)
                 label = "";
 
         //draw rollover label
         if (label != "" && longText == "") {
-            textFont(font, FONT_SIZE);
-            textAlign(LEFT, BASELINE);
-            var lw = textWidth(label);
-            var lx = mouseX;
+	    let padding_x = 7;
+	    let padding_y = 5;
 
-            if ((mouseX + lw + TEXT_PADDING * 2) > width) {
-                lx = width - lw - TEXT_PADDING * 2;
-            }
+	    // need to set these before calling textWidth() for it to work
+	    // correctly
+            textFont(font, ACTIVE_FONT_SIZE);
+            textAlign(CENTER, CENTER);
+
+	    // we position the text below the rolled over sprite
+            var lw = textWidth(label);
+	    let lx = rolledSprite.position.x;
+	    let ly = rolledSprite.position.y + 
+		     rolledSprite.collider.size().y*.5;
+
+	    // this is old likelike code for checking if label would
+	    // go offscreen. probably don't need it anymore
+            // if ((lx + lw + TEXT_PADDING * 2) > width) {
+            //     lx = width - lw - TEXT_PADDING * 2;
+            // }
+
+	    // draw background rectangle
             fill(UI_BG);
             noStroke();
-            rect(floor(lx), floor(mouseY - TEXT_H - TEXT_PADDING * 2), lw + TEXT_PADDING * 2 + 1, TEXT_H + TEXT_PADDING * 2 + 1);
+	    rectMode(CENTER);
+	    // rect(lx, ly, 350, 10);
+            rect(floor(lx), floor(ly), 
+		 lw + padding_x*2, //  + TEXT_PADDING * 2 + 1, 
+		 ACTIVE_FONT_SIZE + padding_y*2);
+
+	    // draw text
             fill(labelColor);
-            text(label, floor(lx + TEXT_PADDING) + 1, floor(mouseY - TEXT_PADDING));
+            text(label, floor(lx), floor(ly));
         }
 
         //long text above everything
@@ -1094,7 +1089,6 @@ function avatarSelection() {
 
 //copy the properties
 function Player(p) {
-    console.log('creating Player object for ' + p.id);
     this.id = p.id;
     this.nickName = p.nickName;
     this.color = p.color;
@@ -1108,10 +1102,6 @@ function Player(p) {
     this.inactive_for = this.inactive_for;
 
     this.sprite = createSprite(100, 100);
-
-    console.log('creating Player: color is ' + this.color);
-
-
 
     if (this.nickName == "") {
         this.sprite.mouseActive = false;
@@ -1127,7 +1117,6 @@ function Player(p) {
     //no parent in js? WHAAAAT?
     this.sprite.id = this.id;
     this.sprite.label = p.nickName;
-    this.sprite.transparent = !this.active;
 
     //save the dominant color for bubbles and rollover label
     // var c = color(this.color)
@@ -1139,7 +1128,6 @@ function Player(p) {
 
     this.x = p.x;
     this.y = p.y;
-    this.dir = 1;
     this.destinationX = p.destinationX;
     this.destinationY = p.destinationY;
 
@@ -1170,21 +1158,20 @@ function Player(p) {
     //ugly as fuck but javascript made me do it
     this.sprite.originalDraw = this.sprite.draw;
     this.sprite.draw = function () {
-
         if (!this.ignore) {
-            if (this.transparent)
+	    let player = players[this.id];
+            if (!player.active)
                 tint(255, 100);
 
             this.originalDraw();
 
-            if (this.transparent)
+            if (!player.active)
                 noTint();
         }
     }
 
     // this.stopWalkingAnimation();
     this.sprite.changeImage('default');
-
 
 }
 
@@ -1254,6 +1241,7 @@ function mouseMoved() {
 function canvasPressed() {
 
     if (nickName != "" && screen == "game") {
+      console.log('canvas pressed!');
       isPanning = true;
 
     }

@@ -356,6 +356,15 @@ io.on('connection', function (socket) {
         }
     });
 
+    socket.on('test', function (obj) {
+        try {
+	  console.log('test! test! test!');
+        } catch (e) {
+            console.log("Error on test" + socket.id + "?");
+            console.error(e);
+        }
+    });
+
 });
 
 
@@ -637,8 +646,11 @@ setInterval(function () {
 
             if (gameState.players[id].nickName != "" && (time - gameState.players[id].lastActivity) > ACTIVITY_TIMEOUT) {
                 console.log(id + " has been idle for more than " + ACTIVITY_TIMEOUT + " disconnecting");
-                io.sockets.sockets[id].emit("refresh");
-                io.sockets.sockets[id].disconnect();
+		// todo: make this actually work (it's been crashing. probably
+		// because that id has been overwritten or something on
+		// reconnect)
+                // io.sockets.sockets[id].emit("refresh");
+                // io.sockets.sockets[id].disconnect();
             }
         }
     }
