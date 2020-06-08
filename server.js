@@ -200,7 +200,8 @@ io.on('connection', function (socket) {
 		  player.id = socket.id;
 		  gameState.players[socket.id] = player;
 	      	  delete gameState.players[oldID];
-		  
+
+		  player.active = true;
                   io.sockets.emit('playerJoined', player); 
 	    }
             else {
@@ -240,7 +241,12 @@ io.on('connection', function (socket) {
 
 		    print('new player ' + playerInfo.nickName + '\'s position = ' + position.x + ', ' + position.y);
 		    
-                    var newPlayer = { id: socket.id, nickName: filter.clean(playerInfo.nickName), color: playerInfo.color, avatar: playerInfo.avatar, x: position.x, y: position.y, active: true, inactive_for: 0};
+
+		    // todo: timestamp
+		    // Date.now() and new Date().getTime() do the same thing
+		    // return number of milliseconds since 1/1/70
+		    // so it's an integer
+                    var newPlayer = { id: socket.id, nickName: filter.clean(playerInfo.nickName), color: playerInfo.color, avatar: playerInfo.avatar, x: position.x, y: position.y, active: true, lastTimeActive: Date.now()};
 
                     //save the same information in my game state
                     gameState.players[socket.id] = newPlayer;
@@ -291,7 +297,6 @@ io.on('connection', function (socket) {
     });
 
     //when a client disconnects we just mark them inactive 
-    // todo: dont' delete this guy on disconnect
     socket.on('disconnect', function () {
         try {
             console.log("Player disconnected " + socket.id);
@@ -305,6 +310,7 @@ io.on('connection', function (socket) {
 	      // but if it's a real boy, just mark them inactive
 	      else {
 		player.active = false;
+		player.lastTimeActive = Date.now();
 	        io.sockets.emit('playerUpdateState', player);
 	      }
 	    }
@@ -349,6 +355,7 @@ io.on('connection', function (socket) {
         try {
 	    let player = gameState.players[socket.id];
 	    player.active = false;
+	    player.lastTimeActive = Date.now();
 	    io.sockets.emit('playerUpdateState', player);
         } catch (e) {
             console.log("Error on blur " + socket.id + "?");

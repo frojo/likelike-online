@@ -11,7 +11,7 @@ var VERSION = "1.0";
 
 //for testing purposes I can skip the login phase
 //and join with a random avatar
-var QUICK_LOGIN = true;
+var QUICK_LOGIN = false;
 
 //true: preview the game as invisible user
 //false: go directly to the login without previewing the room
@@ -558,20 +558,6 @@ function newGame() {
 		    camera.position.x = me.x;
 		    camera.position.y = me.y;
 
-                    /*
-                    me.sprite.mouseActive = false;
-                    me.sprite.onMouseOver = function () { };
-                    me.sprite.onMouseOut = function () { };
-                    */
-
-                    //click on me = emote
-                    me.sprite.onMousePressed = function () { 
-		      console.log('emote!!!');
-		      socket.emit('test', { }); };
-                    me.sprite.onMouseReleased = function () { socket.emit('emote', { em: false }); };
-
-
-
 
                 }//it me
                 else {
@@ -581,14 +567,6 @@ function newGame() {
                 }
 
                 if (p.new && p.nickName != "" && firstLog) {
-		    // example of animating something on first connect
-                    // var spark = createSprite(p.x, p.y - AVATAR_H + 1);
-                    // spark.addAnimation("spark", appearEffect);
-                    // spark.scale = ASSET_SCALE;
-                    // spark.life = 60;
-                    // if (SOUND)
-                    //     appearSound.play();
-
 
                     firstLog = false;
                 }
@@ -820,15 +798,17 @@ function update() {
         var label = areaLabel;
         var labelColor = LABEL_NEUTRAL_COLOR;
 
-        //if lurking disable arealabel
-        if (nickName == "")
-            label = "";
-
         //player and sprites label override areas
+	let player;
         if (rolledSprite != null) {
-	  let player = players[rolledSprite.id];
-	  label = 'active ' + player.inactive_for + ' ago';
+	  player = players[rolledSprite.id];
+	  label = activityLabel(player);
         }
+
+	// don't show labels for players gone for more than 24h
+	if (!player || goneForever(player)) {
+	  label = "";
+	}
 
         //by no circumstance show your name as label
         if (me != null)
@@ -945,6 +925,50 @@ function update() {
     }//end game
 
 
+}
+
+// checks if player has been gone for more than 24 hours
+function goneForever(player) {
+  return (!player.active && 
+	  // debug
+	  // (Date.now() - player.lastTimeActive > 24*60*60*1000));
+	  (Date.now() - player.lastTimeActive > 3*1000));
+}
+
+// pretty prints the active label
+// returns a string
+function activityLabel(player) {
+  if (player.active)
+    return 'active now';
+
+  // time in ms since last time active
+  let time_ms = Date.now() - player.lastTimeActive;
+
+  // debug
+  return 'active ' + time_ms + 'ms ago';
+
+  // away for less than an hour, so we do minute granularity
+  if (time_ms < 60*60*1000) {
+    let minutes = floor(time_ms / (60*1000));
+    if (minutes == 0)
+      minutes = 1;
+    return 'active ' + minutes + 'm ago';
+  }
+  // away for more than an hour (but less than 24h), hour granularity
+  else if (time_ms < 24*60*60*1000) {
+    let hours = floor(time_ms / (60*60*1000));
+    return 'active ' + hours + 'h ago';
+  }
+
+
+  // at some point instagram switches from "active Xh ago" to
+  // "active today" and then, "active yesterday"
+  // when does that happen?
+
+  print('======== ACTIVITY LABEL');
+  print('now: ' + Date.now());
+  print('last time active: ' + player.lastTimeActive);
+  return 'active ' + time_ms + 'ms ago';
 }
 
 
@@ -1095,11 +1119,10 @@ function Player(p) {
     this.avatar = p.avatar;
     this.ignore = false;
 
-    // is this player currently logged on?
+    // is this player currently active?
     this.active = p.active;
-    
-    // seconds of inactivity
-    this.inactive_for = this.inactive_for;
+    // timestamp
+    this.lastTimeActive = p.lastTimeActive;
 
     this.sprite = createSprite(100, 100);
 
@@ -1160,6 +1183,11 @@ function Player(p) {
     this.sprite.draw = function () {
         if (!this.ignore) {
 	    let player = players[this.id];
+
+	    // don't draw if player gone for more than 24 hours
+	    if (goneForever(player))
+	      return;
+	
             if (!player.active)
                 tint(255, 100);
 
