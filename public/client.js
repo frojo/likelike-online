@@ -503,6 +503,8 @@ function newGame() {
         try {
             players = {};
 
+	    print('CONNECTED WITH SERVER!');
+
             //ayay: connection lost while setting up character, just force a refresh
             if (screen == "avatar" || screen == "user") {
                 screen = "error";
@@ -731,7 +733,8 @@ function newGame() {
 	// lol
     });
 
-    //server forces refresh (on disconnect or to force load a new version of the client)
+    //server forces refresh (on disconnect or to force load a new version 
+    // of the client, or when client has been inactive for too long)
     socket.on('refresh', function () {
         socket.disconnect();
         location.reload(true);
@@ -957,9 +960,7 @@ function update() {
 // checks if player has been gone for more than 24 hours
 function goneForever(player) {
   return (!player.active && 
-	  // debug
-	  // (Date.now() - player.lastTimeActive > 24*60*60*1000));
-	  (Date.now() - player.lastTimeActive > 5*1000));
+	  (Date.now() - player.lastTimeActive > 24*60*60*1000));
 }
 
 
@@ -1213,7 +1214,7 @@ function Player(p) {
 	    let player = players[this.id];
 
 	    // don't draw if player gone for more than 24 hours
-	    if (goneForever(player))
+	    if (!player || goneForever(player))
 	      return;
 	
             if (!player.active)
@@ -1723,9 +1724,12 @@ function outOfCanvas() {
     isPanning = false;
 }
 
+// checks if any players have been gone for more than 24 hours, and forgets
+// them if they have.
+// theoretically, if the server interval is working, this shouldn't be
+// necessary. but helps the client keep running in a semi-good state if
+// we disonnect from the server or something
 setInterval(function () {
-  print('checking players to be forgotten');
-
   for (let id in players) {
     if (players.hasOwnProperty(id)) {
       let player = players[id];
@@ -1739,13 +1743,17 @@ setInterval(function () {
 	}
 
 	delete players[id];
+
+	// i had my tab in the background for too long, refresh
+	if (id == me.id) {
+	  socket.disconnect();
+          location.reload(true);
+	}
       }
     }
   }
 
-// }, 60*60*1000);
-// debug
-}, 1000);
+}, 60*60*1000);
 
 //disable scroll on phone
 function preventBehavior(e) {

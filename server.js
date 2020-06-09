@@ -651,15 +651,12 @@ http.listen(port, function () {
 
 function goneForever(player) {
   return (!player.active &&
-	  // debug
 	  (Date.now() - player.lastTimeActive > 24*60*60*1000));
-	  // (Date.now() - player.lastTimeActive > 10*1000));
 }
 
 // permanently forget players that have been gone for more than 24 hours
 // runs once an hour
 setInterval(function () {
-    console.log('checking all players that have been gone');
     for (var id in gameState.players) {
         if (gameState.players.hasOwnProperty(id)) {
 	  let player = gameState.players[id];
@@ -668,12 +665,15 @@ setInterval(function () {
 	    delete gameState.players[id];
 	    // broadcast to all clients, telling them to delete this player
 	    io.sockets.emit('goneForever', player);
+
+	    // if this player has been inactive due to not having their 
+	    // screen focused (e.g. window open in background), force refresh
+            let socket = io.sockets.sockets[id];
+	    socket.emit('refresh');
 	  }
         }
     }
-// }, 60*60*1000);
-// debug
-}, 1000);
+}, 60*60*1000);
 
 
 
