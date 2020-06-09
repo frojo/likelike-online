@@ -1724,37 +1724,6 @@ function outOfCanvas() {
     isPanning = false;
 }
 
-// checks if any players have been gone for more than 24 hours, and forgets
-// them if they have.
-// theoretically, if the server interval is working, this shouldn't be
-// necessary. but helps the client keep running in a semi-good state if
-// we disonnect from the server or something
-setInterval(function () {
-  for (let id in players) {
-    if (players.hasOwnProperty(id)) {
-      let player = players[id];
-      if (goneForever(player)) {
-	console.log(id + 'has been forgotten by client check');
-	if (players[id] && players[id].sprite != null) {
-	  if (players[id].sprite == rolledSprite) {
-            rolledSprite = null;
-	  }
-	  removeSprite(players[id].sprite);
-	}
-
-	delete players[id];
-
-	// i had my tab in the background for too long, refresh
-	if (id == me.id) {
-	  socket.disconnect();
-          location.reload(true);
-	}
-      }
-    }
-  }
-
-}, 60*60*1000);
-
 //disable scroll on phone
 function preventBehavior(e) {
     e.preventDefault();
