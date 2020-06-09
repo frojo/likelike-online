@@ -581,7 +581,8 @@ function newGame() {
         }
     );
 
-    // for whenever a player's state should be updated
+    // a general purpose signal for updating one player's state
+    // used to mostly mark players active/inactive
     socket.on('playerUpdateState',
 	function(p) {
 	  try {
@@ -604,6 +605,32 @@ function newGame() {
 	      console.error(e)
 	  }
     });
+
+    // delete and forget this player
+    socket.on('goneForever',
+	function(p) {
+	  try {
+	    print('forgetting player ' + p.id + ' bc server said so');
+	    let player = players[p.id];
+ 	    if (!player)
+ 	      return;
+
+ 	    // clean up sprite things
+ 	    if (player.sprite != null) {
+ 	      if (player.sprite == rolledSprite) {
+ 	        rolledSprite = null;
+ 	      }
+ 	      removeSprite(player.sprite);
+ 	    }
+
+ 	    // forget player from our master list
+ 	    delete players[p.id];
+	  } catch (e) {
+	      console.log('Error on goneForever');
+	      console.error(e)
+	  }
+    });
+
 
 
     // when a player reopens the page
@@ -916,7 +943,7 @@ function update() {
             fill(255);
 	    stroke(0);
 	    strokeWeight(1);
-	    text('souls', WIDTH/2, HEIGHT/2);
+	    text('goneForever', WIDTH/2, HEIGHT/2);
 	    camera.on();
 	    
             // animation(logo, floor(width / 2), floor(height / 2));
@@ -932,8 +959,9 @@ function goneForever(player) {
   return (!player.active && 
 	  // debug
 	  // (Date.now() - player.lastTimeActive > 24*60*60*1000));
-	  (Date.now() - player.lastTimeActive > 3*1000));
+	  (Date.now() - player.lastTimeActive > 5*1000));
 }
+
 
 // pretty prints the active label
 // returns a string
@@ -1694,6 +1722,30 @@ function outOfCanvas() {
 
     isPanning = false;
 }
+
+setInterval(function () {
+  print('checking players to be forgotten');
+
+  for (let id in players) {
+    if (players.hasOwnProperty(id)) {
+      let player = players[id];
+      if (goneForever(player)) {
+	console.log(id + 'has been forgotten by client check');
+	if (players[id] && players[id].sprite != null) {
+	  if (players[id].sprite == rolledSprite) {
+            rolledSprite = null;
+	  }
+	  removeSprite(players[id].sprite);
+	}
+
+	delete players[id];
+      }
+    }
+  }
+
+// }, 60*60*1000);
+// debug
+}, 1000);
 
 //disable scroll on phone
 function preventBehavior(e) {

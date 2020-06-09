@@ -342,8 +342,10 @@ io.on('connection', function (socket) {
 	// todo: change activeness
         try {
 	    let player = gameState.players[socket.id];
-	    player.active = true;
-	    io.sockets.emit('playerUpdateState', player);
+	    if (player) {
+	      player.active = true;
+	      io.sockets.emit('playerUpdateState', player);
+	    }
         } catch (e) {
             console.log("Error on focus " + socket.id + "?");
             console.error(e);
@@ -354,9 +356,11 @@ io.on('connection', function (socket) {
 	// todo: change activeness
         try {
 	    let player = gameState.players[socket.id];
-	    player.active = false;
-	    player.lastTimeActive = Date.now();
-	    io.sockets.emit('playerUpdateState', player);
+	    if (player) {
+	      player.active = false;
+	      player.lastTimeActive = Date.now();
+	      io.sockets.emit('playerUpdateState', player);
+	    }
         } catch (e) {
             console.log("Error on blur " + socket.id + "?");
             console.error(e);
@@ -644,23 +648,31 @@ http.listen(port, function () {
     console.log('listening on *:3000');
 });
 
-//check the last activity and disconnect players that have been idle for too long
-setInterval(function () {
-    var time = new Date().getTime();
 
+function goneForever(player) {
+  return (!player.active &&
+	  // debug
+	  (Date.now() - player.lastTimeActive > 24*60*60*1000));
+	  // (Date.now() - player.lastTimeActive > 10*1000));
+}
+
+// permanently forget players that have been gone for more than 24 hours
+// runs once an hour
+setInterval(function () {
+    console.log('checking all players that have been gone');
     for (var id in gameState.players) {
         if (gameState.players.hasOwnProperty(id)) {
-
-            if (gameState.players[id].nickName != "" && (time - gameState.players[id].lastActivity) > ACTIVITY_TIMEOUT) {
-                console.log(id + " has been idle for more than " + ACTIVITY_TIMEOUT + " disconnecting");
-		// todo: make this actually work (it's been crashing. probably
-		// because that id has been overwritten or something on
-		// reconnect)
-                // io.sockets.sockets[id].emit("refresh");
-                // io.sockets.sockets[id].disconnect();
-            }
+	  let player = gameState.players[id];
+	  if (goneForever(player)) {
+	    console.log(id + " has been inactive for more than 24 hours");
+	    delete gameState.players[id];
+	    // broadcast to all clients, telling them to delete this player
+	    io.sockets.emit('goneForever', player);
+	  }
         }
     }
+// }, 60*60*1000);
+// debug
 }, 1000);
 
 
