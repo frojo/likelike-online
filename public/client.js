@@ -973,9 +973,6 @@ function activityLabel(player) {
   // time in ms since last time active
   let time_ms = Date.now() - player.lastTimeActive;
 
-  // debug
-  return 'active ' + time_ms + 'ms ago';
-
   // away for less than an hour, so we do minute granularity
   if (time_ms < 60*60*1000) {
     let minutes = floor(time_ms / (60*1000));
@@ -983,21 +980,15 @@ function activityLabel(player) {
       minutes = 1;
     return 'active ' + minutes + 'm ago';
   }
-  // away for more than an hour (but less than 24h), hour granularity
-  else if (time_ms < 24*60*60*1000) {
+
+  // away for more than an hour, but less than 8 hours, hour granularity
+  else if (time_ms < 8*60*60*1000) {
     let hours = floor(time_ms / (60*60*1000));
     return 'active ' + hours + 'h ago';
   }
 
-
-  // at some point instagram switches from "active Xh ago" to
-  // "active today" and then, "active yesterday"
-  // when does that happen?
-
-  print('======== ACTIVITY LABEL');
-  print('now: ' + Date.now());
-  print('last time active: ' + player.lastTimeActive);
-  return 'active ' + time_ms + 'ms ago';
+  // if away for more than 8 hours, we vague
+  return 'active a while ago';
 }
 
 
