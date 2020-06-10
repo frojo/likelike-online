@@ -209,7 +209,7 @@ var appearSound, disappearSound;
 var firstLog = true;
 
 //async check
-var dataLoaded = false;
+var serverWelcomed = false;
 var gameStarted = false;
 
 // is the player dragging to pan?
@@ -217,6 +217,7 @@ var isPanning = false;
 
 // is the player relogging in
 var relog = false;
+
 
 /*
 Things are quite asynchronous here. This is the startup sequence:
@@ -389,6 +390,7 @@ function setup() {
                 }
 
 		relog = isRelog;
+		serverWelcomed = true;
 
             }
         }
@@ -400,17 +402,7 @@ function setup() {
 
 
 function draw() {
-
-    //this is like a second janky preload: I'm waiting for data from the server and for the images linked within it to load
-    if (!dataLoaded) {
-        //loaded except when it's NOT
-        dataLoaded = true;
-
-        if (dataLoaded)
-            print("data and assets loaded");
-    }
-
-    if (dataLoaded && !gameStarted) {
+    if (serverWelcomed && !gameStarted) {
         setupGame();
     }
 
@@ -469,6 +461,7 @@ function newGame() {
 
     // if we're lurking and not re logging in, show join/creation screen
     if (nickName == "" && !relog) {
+	print('show the join button!');
         showJoin();
     }
 
@@ -502,8 +495,6 @@ function newGame() {
     socket.on('connect', function () {
         try {
             players = {};
-
-	    print('CONNECTED WITH SERVER!');
 
             //ayay: connection lost while setting up character, just force a refresh
             if (screen == "avatar" || screen == "user") {
@@ -946,7 +937,7 @@ function update() {
             fill(255);
 	    stroke(0);
 	    strokeWeight(1);
-	    text('goneForever', WIDTH/2, HEIGHT/2);
+	    text('souls', WIDTH/2, HEIGHT/2);
 	    camera.on();
 	    
             // animation(logo, floor(width / 2), floor(height / 2));
@@ -1499,6 +1490,8 @@ function nameOk() {
 }
 
 function nameValidationCallBack(code) {
+
+    print('name validation callback!');
     if (socket.id) {
 
         if (code == 0) {
