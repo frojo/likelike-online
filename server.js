@@ -392,20 +392,9 @@ setInterval(function () {
 // bias towards being near people that recently logged on for the first time
 // returns an object with properties x and y
 function newPlayerPosition() {
-  let newPos;
 
-  // todo: what if it can't find it 100 tries?
-  // probably means there's no feasible location, pick a new
-  // random player to try from. although that could get slow... imagine
-  // a circular blob of players. we'd pickj
-  // what if we go from most recent to lea
-  for (let i = 0; i < 100; i++) {
-    newPos = randomPointOnCircle(mostRecentPlayerPos, 200);
-    if (validatePosition(newPos)) {
-      break;
-    }
-  }
-  
+  // k
+  let newPos = randomPointOnCircle(mostRecentPlayerPos, 200);
   mostRecentPlayerPos = newPos;
   return newPos;
 }
