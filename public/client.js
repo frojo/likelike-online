@@ -816,28 +816,17 @@ function update() {
         drawSprites();
 
         //GUI
-        var label = areaLabel;
-        var labelColor = LABEL_NEUTRAL_COLOR;
-
-        //player and sprites label override areas
+	
 	let player;
-        if (rolledSprite != null) {
+	// draw label if rolling over sprite that's not ours
+        if (rolledSprite != null && me != null && rolledSprite != me.sprite) {
 	  player = players[rolledSprite.id];
-	  label = activityLabel(player);
         }
-
-	// don't show labels for players gone for more than 24h
-	if (!player || goneForever(player)) {
-	  label = "";
-	}
-
-        //by no circumstance show your name as label
-        if (me != null)
-            if (rolledSprite == me.sprite)
-                label = "";
-
-        //draw rollover label
-        if (label != "" && longText == "") {
+	
+	// draw labels rollover labels
+	if (player && !goneForever(player)) {
+	    // draw activity label (below circle)
+	    activityText = activityLabel(player);
 	    let padding_x = 7;
 	    let padding_y = 5;
 
@@ -847,29 +836,44 @@ function update() {
             textAlign(CENTER, CENTER);
 
 	    // we position the text below the rolled over sprite
-            var lw = textWidth(label);
+            let lw = textWidth(activityText);
 	    let lx = rolledSprite.position.x;
 	    let ly = rolledSprite.position.y + 
 		     rolledSprite.collider.size().y*.5;
-
-	    // this is old likelike code for checking if label would
-	    // go offscreen. probably don't need it anymore
-            // if ((lx + lw + TEXT_PADDING * 2) > width) {
-            //     lx = width - lw - TEXT_PADDING * 2;
-            // }
 
 	    // draw background rectangle
             fill(UI_BG);
             noStroke();
 	    rectMode(CENTER);
-	    // rect(lx, ly, 350, 10);
             rect(floor(lx), floor(ly), 
-		 lw + padding_x*2, //  + TEXT_PADDING * 2 + 1, 
+		 lw + padding_x*2,
 		 ACTIVE_FONT_SIZE + padding_y*2);
 
 	    // draw text
-            fill(labelColor);
-            text(label, floor(lx), floor(ly));
+            fill(LABEL_NEUTRAL_COLOR);
+            text(activityText, floor(lx), floor(ly));
+
+
+	    // draw name label (above circle)
+	    let nameText = player.nickName;
+
+	    // we position the text below the rolled over sprite
+            lw = textWidth(nameText);
+	    lx = rolledSprite.position.x;
+	    ly = rolledSprite.position.y - 
+		     rolledSprite.collider.size().y*.5;
+
+	    // draw background rectangle
+            fill(UI_BG);
+            noStroke();
+	    rectMode(CENTER);
+            rect(floor(lx), floor(ly), 
+		 lw + padding_x*2, 
+		 ACTIVE_FONT_SIZE + padding_y*2);
+
+	    // draw text
+            fill(LABEL_NEUTRAL_COLOR);
+            text(nameText, floor(lx), floor(ly));
         }
 
         //long text above everything
@@ -1012,8 +1016,6 @@ function scaleCanvas() {
 
 function colorSelection() {
 
-    // todo: maybe read this https://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
-    // and make better random colors
     var randomColor = color(floor(random(255)), floor(random(255)), floor(random(255)));
     colorPicker = createColorPicker(randomColor);
     colorPicker.parent('color-picker-container');
@@ -1021,10 +1023,6 @@ function colorSelection() {
     // call setCurrentColor() every time user sets color with color picker
     colorPicker.input(setCurrentColor);
     setCurrentColor();
-    // todo: close the color picker window that the user has open? can we?
-    
-    // todo: style the color picker button to fit our style
-
 }
 
 function setCurrentColor() {
@@ -1298,7 +1296,7 @@ function canvasReleased() {
     else if (nickName != "" && screen == "game" && mouseButton == RIGHT) {
         if (me.destinationX == me.x && me.destinationY == me.y) {
 	}
-	    // todo: do something if we click with rmb?
+	    // do something if we click with rmb?
             // socket.emit('emote', { room: me.room, em: false });
     }
     else if (nickName != "" && screen == "game" && mouseButton == LEFT) {
@@ -1330,7 +1328,7 @@ function canvasReleased() {
                     nextCommand = null;
                     var t = players[rolledSprite.id];
                     if (t != null && t != me) {
-		      // todo: what if we clicked on person?
+		      // what if we clicked on someone else?
                     }
                 }
             }
