@@ -392,8 +392,6 @@ setInterval(function () {
 // bias towards being near people that recently logged on for the first time
 // returns an object with properties x and y
 function newPlayerPosition() {
-
-  // k
   let newPos = randomPointOnCircle(mostRecentPlayerPos, 200);
   mostRecentPlayerPos = newPos;
   return newPos;
