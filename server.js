@@ -404,18 +404,6 @@ function randomPointOnCircle(center, r) {
 	  y: center.y + r*Math.sin(theta)};
 }
 
-// check if we can spawn a player at this position
-function validatePosition(pos) {
-  // check that a sprite at this position wouldn't ovelap with any others
-  // could loop over all the current players. that would be linear...
-  // maybe could use p5.play's collision detection stuff
-  //
-  // could probably do something fancy with subdividing the area and using
-  // like a quad tree datastructure
-  // i guess that would make it logn 
-  return true;
-}
-
 
 
 function validateName(nn) {
