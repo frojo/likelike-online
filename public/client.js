@@ -461,9 +461,8 @@ function newGame() {
 
     // if we're lurking and not re logging in, show join/creation screen
     if (nickName == "" && !relog) {
-	print('show the join button!');
         showJoin();
-    }
+    } 
 
     //this is not super elegant but I create another socket for the actual game
     //because I've got the data from the server and I don't want to reinitiate everything 
@@ -818,49 +817,27 @@ function update() {
         //GUI
 	
 	let player;
-	// draw label if rolling over sprite that's not ours
-        if (rolledSprite != null && me != null && rolledSprite != me.sprite) {
+        if (rolledSprite != null) {
 	  player = players[rolledSprite.id];
         }
 	
 	// draw labels rollover labels
 	if (player && !goneForever(player)) {
-	    // draw activity label (below circle)
-	    activityText = activityLabel(player);
-	    let padding_x = 7;
-	    let padding_y = 5;
-
 	    // need to set these before calling textWidth() for it to work
 	    // correctly
             textFont(font, ACTIVE_FONT_SIZE);
             textAlign(CENTER, CENTER);
 
-	    // we position the text below the rolled over sprite
-            let lw = textWidth(activityText);
-	    let lx = rolledSprite.position.x;
-	    let ly = rolledSprite.position.y + 
-		     rolledSprite.collider.size().y*.5;
-
-	    // draw background rectangle
-            fill(UI_BG);
-            noStroke();
-	    rectMode(CENTER);
-            rect(floor(lx), floor(ly), 
-		 lw + padding_x*2,
-		 ACTIVE_FONT_SIZE + padding_y*2);
-
-	    // draw text
-            fill(LABEL_NEUTRAL_COLOR);
-            text(activityText, floor(lx), floor(ly));
-
+	    let padding_x = 7;
+	    let padding_y = 5;
 
 	    // draw name label (above circle)
 	    let nameText = player.nickName;
 
 	    // we position the text below the rolled over sprite
-            lw = textWidth(nameText);
-	    lx = rolledSprite.position.x;
-	    ly = rolledSprite.position.y - 
+            let lw = textWidth(nameText);
+	    let lx = rolledSprite.position.x;
+	    let ly = rolledSprite.position.y - 
 		     rolledSprite.collider.size().y*.5;
 
 	    // draw background rectangle
@@ -874,6 +851,32 @@ function update() {
 	    // draw text
             fill(LABEL_NEUTRAL_COLOR);
             text(nameText, floor(lx), floor(ly));
+
+	    // don't show activity for myself
+	    if (me != null && me.sprite != rolledSprite) {
+	      // draw activity label (below circle)
+	      activityText = activityLabel(player);
+
+	      // we position the name above over sprite
+              let lw = textWidth(activityText);
+	      let lx = rolledSprite.position.x;
+	      let ly = rolledSprite.position.y + 
+	               rolledSprite.collider.size().y*.5;
+
+	      // draw background rectangle
+              fill(UI_BG);
+              noStroke();
+	      rectMode(CENTER);
+              rect(floor(lx), floor(ly), 
+	           lw + padding_x*2,
+	           ACTIVE_FONT_SIZE + padding_y*2);
+
+	      // draw text
+              fill(LABEL_NEUTRAL_COLOR);
+              text(activityText, floor(lx), floor(ly));
+	    }
+
+
         }
 
         //long text above everything
@@ -1698,6 +1701,7 @@ function showJoin() {
 function hideJoin() {
     document.getElementById("join-form").style.display = "none";
 }
+
 
 function outOfCanvas() {
     areaLabel = "";
