@@ -985,10 +985,6 @@ function activityLabel(player) {
     return 'active ' + hours + 'h ago';
   }
   
-  // debug
-  let hours = floor(time_ms / (60*60*1000));
-  return 'active ' + hours + 'h ago';
-
   // if away for more than 8 hours, we vague
   return 'active a while ago';
 }
@@ -1221,29 +1217,23 @@ function Player(p) {
 // 255 is completely opaque, 0 is transparent
 // a player's sprite is completely opaque when they're active
 // when they become inactive, there's an immediate drop-off in opacity, and
-// then a gradual decline the longer they are inactive for, until the sprite
-// fades completely into nothingness at the 24h mark
+// then an exponential decay until the sprite
+// fades into complete nothingness at around 24h
 function opacityFromActivity(p) {
   if (p.active)
     return 255;
 
-  // let max_time_inactive_ms = 24*60*60*1000;
-  // debug
-  let max_time_inactive_ms = 10*1000;
+  let max_time_inactive_ms = 24*60*60*1000;
   let time_inactive_ms = Date.now() - p.lastTimeActive;
 
-  // make sure we don't go negatitve
-  let time_left_ms = max(max_time_inactive_ms - time_inactive_ms, 0);
-
-  // linear map
-  let opacity = map(time_left_ms, 0, max_time_inactive_ms, 
-				  0, 120);
-
-  // exponential decay
+  // exponential decay (so it's a steeper drop off at the beginning)
+  // it's more ~natural~ than linear decay
   // tau_ms is the time it takes for opacity to get to ~.36 of starting value
-  let tau_ms = max_time_inactive_ms/2;
-  let opacity_e = 120*exp(-(1/tau_ms)*time_inactive_ms);
-  return opacity_e;
+  // ty wikipedia https://en.wikipedia.org/wiki/Exponential_decay
+  let tau_ms = max_time_inactive_ms*.6;
+  let opacity = 150*exp(-(1/tau_ms)*time_inactive_ms);
+
+  return opacity;
 }
 
 

@@ -164,7 +164,6 @@ canvas {
 
 /*bottom link*/
 .info {
-	
 	position: absolute;
 	right: 0px;
 	bottom: 0px;
@@ -172,6 +171,7 @@ canvas {
 	text-align: right;
 	margin-bottom: 8px;
 	margin-right: 8px;
+	font-size: 16px;
 }
 
 .info a {
@@ -181,7 +181,7 @@ canvas {
 
 .info a:hover {
 	text-decoration: none;
-	color:#ff77a8;;
+	color:#ff77a8;
 }
 
 
