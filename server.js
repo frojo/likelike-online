@@ -644,7 +644,8 @@ setInterval(function () {
 	    // if this player has been inactive due to not having their 
 	    // screen focused (e.g. window open in background), force refresh
             let socket = io.sockets.sockets[id];
-	    socket.emit('refresh');
+	    if (socket)
+	      socket.emit('refresh');
 	  }
         }
     }

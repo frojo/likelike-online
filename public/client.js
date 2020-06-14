@@ -146,6 +146,9 @@ var areaLabel;
 var labelColor;
 var rolledSprite;
 
+// used for tweening in the rollover label
+var hoverTimer = 0;
+
 //GUI
 //shows up at the beginning, centered, overlapped to room in lurk mode
 var logo;
@@ -821,7 +824,7 @@ function update() {
 	  player = players[rolledSprite.id];
         }
 	
-	// draw labels rollover labels
+	// draw rollover labels
 	if (player && !goneForever(player)) {
 	    // need to set these before calling textWidth() for it to work
 	    // correctly
@@ -830,6 +833,8 @@ function update() {
 
 	    let padding_x = 7;
 	    let padding_y = 5;
+
+	    let opacity = opacityTweened(player);
 
 	    // draw name label (above circle)
 	    let nameText = player.nickName;
@@ -841,7 +846,7 @@ function update() {
 		     rolledSprite.collider.size().y*.5;
 
 	    // draw background rectangle
-            fill(UI_BG);
+            fill(0, 0, 0, opacity);
             noStroke();
 	    rectMode(CENTER);
             rect(floor(lx), floor(ly), 
@@ -849,7 +854,7 @@ function update() {
 		 ACTIVE_FONT_SIZE + padding_y*2);
 
 	    // draw text
-            fill(LABEL_NEUTRAL_COLOR);
+            fill(255, 255, 255, opacity);
             text(nameText, floor(lx), floor(ly));
 
 	    // don't show activity for myself
@@ -864,7 +869,7 @@ function update() {
 	               rolledSprite.collider.size().y*.5;
 
 	      // draw background rectangle
-              fill(UI_BG);
+              fill(0, 0, 0, opacity);
               noStroke();
 	      rectMode(CENTER);
               rect(floor(lx), floor(ly), 
@@ -872,7 +877,7 @@ function update() {
 	           ACTIVE_FONT_SIZE + padding_y*2);
 
 	      // draw text
-              fill(LABEL_NEUTRAL_COLOR);
+              fill(255, 255, 255, opacity);
               text(activityText, floor(lx), floor(ly));
 	    }
 
@@ -1179,6 +1184,7 @@ function Player(p) {
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
             rolledSprite = this;
+	    hoverTimer = 0;
         };
 
         this.sprite.onMouseOut = function () {
@@ -1204,6 +1210,8 @@ function Player(p) {
             tint(255, opacityFromActivity(player));
             this.originalDraw();
             noTint();
+
+	    hoverTimer += 1;
         }
     }
 
@@ -1211,7 +1219,6 @@ function Player(p) {
     this.sprite.changeImage('default');
 
 }
-
 
 // calculates oppacity of player sprite based on how long they've been inactive
 // 255 is completely opaque, 0 is transparent
@@ -1235,6 +1242,18 @@ function opacityFromActivity(p) {
 
   return opacity;
 }
+
+// todo
+// when you hover over a
+function opacityTweened(p) {
+  let maxOpacity = opacityFromActivity(p);
+  let maxFramesFadeIn = 200;
+
+  let pct = min(hoverTimer/maxFramesFadeIn, 1);
+  return maxOpacity*pct;
+}
+
+// maybe a function that given a player and percent (i.e. number from 0 to 1)
 
 
 //they exist in a different container so kill them
