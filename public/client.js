@@ -146,8 +146,19 @@ var areaLabel;
 var labelColor;
 var rolledSprite;
 
-// used for tweening in the rollover label
+
+// the following vars are used for having that fade-in effect on mouseover
+
+// how many frames we've been hovering over the label
 var hoverTimer = 0;
+
+// a number between 0 and 1 that the represents the opacity modifier for the
+// label that is being hovered over currently
+var labelOpacityPct = 0;
+
+// this basically measures how "move-y" he mouse is -- how much is it currently
+// moving, or how much has it moved in the last few seconds
+var mouseTemperature = 0;
 
 //GUI
 //shows up at the beginning, centered, overlapped to room in lurk mode
@@ -794,8 +805,11 @@ function update() {
                 //make sure the coordinates are non null since I may have created a player
                 //but I may still be waiting for the first update
                 if (p.x != null && p.y != null) {
-		    p.updatePosition()
+		    p.updatePosition();
                 }
+
+		// i wonder if this will kill performance... we will see
+		// p.updateLabelOpacity();
             }
         }//player update cycle
 
@@ -817,6 +831,15 @@ function update() {
 
         drawSprites();
 
+	// todo
+	updateLabelOpacity();
+	// updateLabelOpacitySimple();
+
+	// todo - update mouse movement
+	// updateMouseTemperature(mouse);
+	print('mouse temperature: ' + getMouseTemperature());
+
+
         //GUI
 	
 	let player;
@@ -834,7 +857,7 @@ function update() {
 	    let padding_x = 7;
 	    let padding_y = 5;
 
-	    let opacity = opacityTweened(player);
+	    let opacity = labelOpacityPct*opacityFromActivity(player);
 
 	    // draw name label (above circle)
 	    let nameText = player.nickName;
@@ -1158,6 +1181,10 @@ function Player(p) {
     this.sprite.id = this.id;
     this.sprite.label = p.nickName;
 
+    // a number between 0 and 1 that the represents the opacity modifier
+    // for the label that is being hovered over currently
+    this.labelOpacityPct = 0;
+
     //save the dominant color for bubbles and rollover label
     // var c = color(this.color)
 
@@ -1184,7 +1211,8 @@ function Player(p) {
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
             rolledSprite = this;
-	    hoverTimer = 0;
+	    // hoverTimer = 0;
+	    // labelOpacityPct = 0;
         };
 
         this.sprite.onMouseOut = function () {
@@ -1206,12 +1234,10 @@ function Player(p) {
 	    if (!player || goneForever(player))
 	      return;
 
-	    // make sprite transparent based of inactivity
             tint(255, opacityFromActivity(player));
+
             this.originalDraw();
             noTint();
-
-	    hoverTimer += 1;
         }
     }
 
@@ -1243,17 +1269,61 @@ function opacityFromActivity(p) {
   return opacity;
 }
 
+
+// maybe a function that given a player and percent (i.e. number from 0 to 1)
+function getMouseTemperature() {
+  return mag(movedX, movedY);
+}
+
+// ideas
+// maybe if it's /really/ over the threshold, drive the opacity even more
+//
+//
+// updates the label opacity percentage based on mouse movement
+//
+// the idea is that in order to see someone's activity, you have to tenderly
+// stroke their avatar with your cursor
+//
+// above a certain "mouse temperature" threshold, the opacity should be driven
+// to be "max opaqueness" (which depends on how long they've been active for)
+// and under that mouse movement threshold, it sort of naturally fades back to
+// transparent
+function updateLabelOpacity(p)  {
+  let too_fast = 2;
+  let too_slow = .5;
+  let opacityIncr = .015;
+  let opacityDecr = .003;
+
+  let temperature = getMouseTemperature();
+  
+  if (temperature < too_fast && temperature > too_slow) {
+    labelOpacityPct += opacityIncr;
+  } else {
+    labelOpacityPct -= opacityDecr;
+  }
+  labelOpacityPct = constrain(labelOpacityPct, 0, 1);
+}
+
 // todo
+// a couple things:
+//
+// it would be nice to be able to have multiple circles show their activity
+// (like you can hop from one to other)
+//
+// make sure that you can't rub too fast
+//
+// maybe the label max opaqueness shouldn't be capped at their activity 
+// opaqueness?
+//
+// 
+
 // when you hover over a
-function opacityTweened(p) {
-  let maxOpacity = opacityFromActivity(p);
-  let maxFramesFadeIn = 200;
+function updateLabelOpacitySimple(p) {
+  let maxFramesFadeIn = 30;
 
   let pct = min(hoverTimer/maxFramesFadeIn, 1);
   return maxOpacity*pct;
 }
-
-// maybe a function that given a player and percent (i.e. number from 0 to 1)
 
 
 //they exist in a different container so kill them
