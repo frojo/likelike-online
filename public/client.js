@@ -809,7 +809,7 @@ function update() {
                 }
 
 		// i wonder if this will kill performance... we will see
-		// p.updateLabelOpacity();
+		p.updateLabelOpacity();
             }
         }//player update cycle
 
@@ -831,15 +831,6 @@ function update() {
 
         drawSprites();
 
-	// todo
-	updateLabelOpacity();
-	// updateLabelOpacitySimple();
-
-	// todo - update mouse movement
-	// updateMouseTemperature(mouse);
-	print('mouse temperature: ' + getMouseTemperature());
-
-
         //GUI
 	
 	let player;
@@ -847,64 +838,67 @@ function update() {
 	  player = players[rolledSprite.id];
         }
 	
-	// draw rollover labels
-	if (player && !goneForever(player)) {
-	    // need to set these before calling textWidth() for it to work
-	    // correctly
-            textFont(font, ACTIVE_FONT_SIZE);
-            textAlign(CENTER, CENTER);
+	// draw labels
+        for (var playerId in players) {
+            if (players.hasOwnProperty(playerId)) {
+                var p = players[playerId];
+		// draw rollover labels
+		if (p && p.nickName != '' && !goneForever(p)) {
+		  // need to set these before calling textWidth() for it to work
+	       	  // correctly
+               	  textFont(font, ACTIVE_FONT_SIZE);
+               	  textAlign(CENTER, CENTER);
 
-	    let padding_x = 7;
-	    let padding_y = 5;
+	       	  let padding_x = 7;
+	       	  let padding_y = 5;
+	       	  let opacity = p.labelOpacityPct*opacityFromActivity(p);
 
-	    let opacity = labelOpacityPct*opacityFromActivity(player);
+	       	  // draw name label (above circle)
+	       	  let nameText = p.nickName;
 
-	    // draw name label (above circle)
-	    let nameText = player.nickName;
+	       	  // we position the text below the rolled over sprite
+               	  let lw = textWidth(nameText);
+	       	  let lx = p.sprite.position.x;
+	       	  let ly = p.sprite.position.y - 
+	       	           p.sprite.collider.size().y*.5;
 
-	    // we position the text below the rolled over sprite
-            let lw = textWidth(nameText);
-	    let lx = rolledSprite.position.x;
-	    let ly = rolledSprite.position.y - 
-		     rolledSprite.collider.size().y*.5;
+	       	  // draw background rectangle
+               	  fill(0, 0, 0, opacity);
+               	  noStroke();
+	       	  rectMode(CENTER);
+               	  rect(floor(lx), floor(ly), 
+	       	       lw + padding_x*2, 
+	       	       ACTIVE_FONT_SIZE + padding_y*2);
 
-	    // draw background rectangle
-            fill(0, 0, 0, opacity);
-            noStroke();
-	    rectMode(CENTER);
-            rect(floor(lx), floor(ly), 
-		 lw + padding_x*2, 
-		 ACTIVE_FONT_SIZE + padding_y*2);
+	       	  // draw text
+               	  fill(255, 255, 255, opacity);
+               	  text(nameText, floor(lx), floor(ly));
 
-	    // draw text
-            fill(255, 255, 255, opacity);
-            text(nameText, floor(lx), floor(ly));
+	       	  // don't show activity for myself
+	       	  if (me != null && me.sprite != p.sprite) {
+	       	    // draw activity label (below circle)
+	       	    activityText = activityLabel(p);
 
-	    // don't show activity for myself
-	    if (me != null && me.sprite != rolledSprite) {
-	      // draw activity label (below circle)
-	      activityText = activityLabel(player);
+	       	    // we position the name above over sprite
+               	    let lw = textWidth(activityText);
+	       	    let lx = p.sprite.position.x;
+	       	    let ly = p.sprite.position.y + 
+	       	             p.sprite.collider.size().y*.5;
 
-	      // we position the name above over sprite
-              let lw = textWidth(activityText);
-	      let lx = rolledSprite.position.x;
-	      let ly = rolledSprite.position.y + 
-	               rolledSprite.collider.size().y*.5;
+	       	    // draw background rectangle
+               	    fill(0, 0, 0, opacity);
+               	    noStroke();
+	       	    rectMode(CENTER);
+               	    rect(floor(lx), floor(ly), 
+	       	         lw + padding_x*2,
+	       	         ACTIVE_FONT_SIZE + padding_y*2);
 
-	      // draw background rectangle
-              fill(0, 0, 0, opacity);
-              noStroke();
-	      rectMode(CENTER);
-              rect(floor(lx), floor(ly), 
-	           lw + padding_x*2,
-	           ACTIVE_FONT_SIZE + padding_y*2);
-
-	      // draw text
-              fill(255, 255, 255, opacity);
-              text(activityText, floor(lx), floor(ly));
+	       	    // draw text
+               	    fill(255, 255, 255, opacity);
+               	    text(activityText, floor(lx), floor(ly));
+	       	  }
+		}
 	    }
-
-
         }
 
         //long text above everything
@@ -1208,6 +1202,36 @@ function Player(p) {
         this.sprite.position.y = round(this.y - AVATAR_H / 2 * this.sprite.scale);
     }
 
+    // the idea is that in order to see someone's activity, you have to
+    // tenderly stroke their avatar with your cursor
+    //
+    // above a certain "mouse temperature" threshold, the opacity should be
+    // driven
+    // to be "max opaqueness"
+    // (which depends on how long they've been active for)
+    // and under that mouse movement threshold, it sort of naturally
+    // fades back to transparent
+    this.updateLabelOpacity = function () {
+      let too_fast = 1.2;
+      let too_slow = .9;
+      let opacityIncr = .015;
+      let opacityDecr = .003;
+
+      let temperature = getMouseTemperature();
+      
+      // increment when the cursor is stroking us tenderly
+      if (this.sprite.mouseIsOver &&
+	  temperature < too_fast && temperature > too_slow) {
+	  this.labelOpacityPct += opacityIncr;
+      }
+      // otherwise, fade into nothingness
+      else {
+        this.labelOpacityPct -= opacityDecr;
+      }
+      this.labelOpacityPct = constrain(this.labelOpacityPct, 0, 1);
+    }
+
+
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
             rolledSprite = this;
@@ -1269,60 +1293,9 @@ function opacityFromActivity(p) {
   return opacity;
 }
 
-
 // maybe a function that given a player and percent (i.e. number from 0 to 1)
 function getMouseTemperature() {
   return mag(movedX, movedY);
-}
-
-// ideas
-// maybe if it's /really/ over the threshold, drive the opacity even more
-//
-//
-// updates the label opacity percentage based on mouse movement
-//
-// the idea is that in order to see someone's activity, you have to tenderly
-// stroke their avatar with your cursor
-//
-// above a certain "mouse temperature" threshold, the opacity should be driven
-// to be "max opaqueness" (which depends on how long they've been active for)
-// and under that mouse movement threshold, it sort of naturally fades back to
-// transparent
-function updateLabelOpacity(p)  {
-  let too_fast = 2;
-  let too_slow = .5;
-  let opacityIncr = .015;
-  let opacityDecr = .003;
-
-  let temperature = getMouseTemperature();
-  
-  if (temperature < too_fast && temperature > too_slow) {
-    labelOpacityPct += opacityIncr;
-  } else {
-    labelOpacityPct -= opacityDecr;
-  }
-  labelOpacityPct = constrain(labelOpacityPct, 0, 1);
-}
-
-// todo
-// a couple things:
-//
-// it would be nice to be able to have multiple circles show their activity
-// (like you can hop from one to other)
-//
-// make sure that you can't rub too fast
-//
-// maybe the label max opaqueness shouldn't be capped at their activity 
-// opaqueness?
-//
-// 
-
-// when you hover over a
-function updateLabelOpacitySimple(p) {
-  let maxFramesFadeIn = 30;
-
-  let pct = min(hoverTimer/maxFramesFadeIn, 1);
-  return maxOpacity*pct;
 }
 
 
