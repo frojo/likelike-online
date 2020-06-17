@@ -1,3 +1,6 @@
+
+var whiteNoiseFrame;
+
 //check README.md for more information
 
 //VS Code intellisense
@@ -218,6 +221,11 @@ var appearEffect, disappearEffect;
 var blips;
 var appearSound, disappearSound;
 
+// white noise overlay
+var whiteNoiseAnim;
+var whiteNoiseAnimIndex = 0;
+var whiteNoiseLoaded = false;
+
 //if the server restarts the clients reconnects seamlessly
 //don't do first log kind of things
 var firstLog = true;
@@ -356,6 +364,11 @@ function preload() {
     disappearSound.setVolume(0.3);
 
 
+    // whiteNoiseAnim = createImg(ASSETS_FOLDER + 'white-noise1.gif');
+    whiteNoiseAnim = new p5Gif.loadGif(ASSETS_FOLDER + 'white-noise1.gif',
+			  function () {
+			    whiteNoiseLoaded = true;
+			  });
 }
 
 
@@ -416,7 +429,7 @@ function setup() {
 
 
 function draw() {
-    if (serverWelcomed && !gameStarted) {
+    if (serverWelcomed && whiteNoiseLoaded && !gameStarted) {
         setupGame();
     }
 
@@ -491,6 +504,15 @@ function newGame() {
     socket = io({
         autoConnect: false
     });
+
+    // set width and height of white noise effect
+    whiteNoiseAnim.width = WIDTH;
+    whiteNoiseAnim.height = HEIGHT;
+    whiteNoiseFrame = whiteNoiseAnim._frames[0];
+
+
+
+    // whiteNoiseAnim.loop();
 
     //paint background
     background(PAGE_COLOR);
@@ -792,8 +814,21 @@ function update() {
 	camera.off();
 	fill(PAGE_COLOR);
 	rect(0, 0, WIDTH, HEIGHT);
-	camera.on();
 
+	// todo draw whiteNoiseAnim
+	// p5Gif uses p5.image() under the hood to blit every frame so maybe
+	// we can do something to get the opacity right?
+	tint(255, 50);
+
+	// image(whiteNoiseFrame, 0, 0);
+	// whiteNoiseAnim.next();
+	image(whiteNoiseAnim._frames[whiteNoiseAnimIndex++], 
+	  0, 0, whiteNoiseAnim.width, whiteNoiseAnim.height);
+	if (whiteNoiseAnimIndex >= whiteNoiseAnim._frames.length)
+                whiteNoiseAnimIndex = 0;
+	noTint();
+
+	camera.on();
 
         textFont(font, FONT_SIZE);
 
@@ -808,7 +843,7 @@ function update() {
 		    p.updatePosition();
                 }
 
-		// i wonder if this will kill performance... we will see
+	      // todo
 		p.updateLabelOpacity();
             }
         }//player update cycle
@@ -1220,7 +1255,7 @@ function Player(p) {
       let temperature = getMouseTemperature();
       
       // increment when the cursor is stroking us tenderly
-      if (this.sprite.mouseIsOver &&
+      if (nickName != '' && this.sprite.mouseIsOver &&
 	  temperature < too_fast && temperature > too_slow) {
 	  this.labelOpacityPct += opacityIncr;
       }
