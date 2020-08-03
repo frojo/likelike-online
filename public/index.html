@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>active now</title>
+    <title>souls</title>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
@@ -18,12 +18,12 @@
     <meta name="keywords" content="Game,Art,videogame" />
 
     <meta property="og:image" content="todo" />
-    <meta property="og:title" content='"active now"' />
+    <meta property="og:title" content="souls" />
     <meta property="og:description" content="a tiny, lonely social network" />
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@franmorojo" />
-    <meta name="twitter:title" content='"active now"' />
+    <meta name="twitter:title" content="souls" />
     <meta name="twitter:description" content='the tiniest "social" network' />
     <meta name="twitter:image" content="" />
 
@@ -48,11 +48,12 @@
         <div id="lobby-container" style="display: none;">
             <div class="content-center">
 
-                <div class="lobby-message">who are you?</div>
+                <div class="lobby-message">name?</div>
                 <form action="" onsubmit="return nameOk()">
-                    <input id="lobby-field" class="lobby-field" placeholder="username" maxlength="16" autocomplete="off"
+                    <input id="lobby-field" class="lobby-field" placeholder="name" maxlength="16" autocomplete="off"
                         autocorrect="off" autocapitalize="off" spellcheck="false" />
                 </form>
+		<button class="user-button" type="button" onclick="nameOk();">ok.</button>
                 <div id="lobby-error" class="lobby-error-message"></div>
 
 
@@ -61,39 +62,17 @@
         <div id="color-container" style="display: none;">
             <div class="content-center">
 
-                <div class="color-message">choose your color</div>
+                <div class="color-message">color?</div>
                 <div id="color-picker-container"></div>
+		<button class="color-button" type="button" onclick="colorOk();">ok.</button>
 
             </div>
         </div>
 
 
+      <div id="info" class="info"><a href="https://fran.red/" target="_blank">maintained by fran.red</a></div>
 
     </div>
-    <div id="interface">
-        <!-- talk form is below canvas getTalkInput is what happens when return is pressed-->
-        <form id="join-form" action="" onsubmit="return joinGame()" style="display: none;">
-            <!-- call the function below on button press-->
-            <button class="join-button" type="button" onclick="joinGame();">join</button>
-        </form>
-
-        <form id="user-form" action="" onsubmit="return nameOk()" style="display: none;">
-            <!-- call the function below on button press-->
-            <button class="user-button" type="button" onclick="nameOk();">CONTINUE</button>
-        </form>
-
-        <form id="avatar-form" action="" onsubmit="return bodyOk()" style="display: none;">
-            <!-- call the function below on button press-->
-            <button class="avatar-button" type="button" onclick="bodyOk();">CONTINUE</button>
-        </form>
-
-        <form id="color-form" action="" onsubmit="return colorOk()" style="display: none;">
-            <!-- call the function below on button press-->
-            <button class="color-button" type="button" onclick="colorOk();">continue</button>
-        </form>
-
-    </div>
-    <div id="info" class="info"><a href="https://fran.red/" target="_blank">maintained by fran.red</a></div>
 
 </body>
 

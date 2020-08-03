@@ -1,6 +1,4 @@
-
-var whiteNoiseFrame;
-
+var debugImg;
 //check README.md for more information
 
 //VS Code intellisense
@@ -27,11 +25,15 @@ var AFK = false;
 
 //native canvas resolution
 var WIDTH = 1024;
-var HEIGHT = 800;
+var HEIGHT = 1024;
+
+// our "canvas" is square
+var NATIVE_SIZE = 1024;
 
 
 //dynamically adjusted based on the window
 var canvasScale;
+var landscapeMode;
 
 //all avatars are the same size
 var AVATAR_W = 16
@@ -226,6 +228,9 @@ var whiteNoiseAnim;
 var whiteNoiseAnimIndex = 0;
 var whiteNoiseLoaded = false;
 
+// mask overlay that makes the border fuzzy and circular
+var borderMask;
+
 //if the server restarts the clients reconnects seamlessly
 //don't do first log kind of things
 var firstLog = true;
@@ -239,6 +244,23 @@ var isPanning = false;
 
 // is the player relogging in
 var relog = false;
+
+// number of frames that the player has spent with their mouse hovering over
+// another avatar
+// used for the little magic trick of adjusting mouse temperature thresholds
+// for tender rubbing
+var framesSpentHovering = 0;
+
+// opacity for the be gentle label
+var beGentleLabelOpacityPct = 0;
+var beGentleX = 0;
+var beGentleY = 0;
+
+var gentleSlider;
+
+// timestamp for when we start a new game
+// used for tuning mouse temperature tenderness thresholds
+var newGameStarted = 0;
 
 
 /*
@@ -363,12 +385,16 @@ function preload() {
     disappearSound.playMode('sustain');
     disappearSound.setVolume(0.3);
 
+    debugImg = loadImage(ASSETS_FOLDER + 'top-cabinet.png');
 
     // whiteNoiseAnim = createImg(ASSETS_FOLDER + 'white-noise1.gif');
     whiteNoiseAnim = new p5Gif.loadGif(ASSETS_FOLDER + 'white-noise1.gif',
 			  function () {
 			    whiteNoiseLoaded = true;
 			  });
+    
+  
+    borderMask = loadImage(ASSETS_FOLDER + 'fuzzy-border-mask.png');
 }
 
 
@@ -377,6 +403,10 @@ function setup() {
 
     //create a canvas
     canvas = createCanvas(WIDTH, HEIGHT);
+    
+    // debug
+    gentleSlider = createSlider(0, 255, 100);
+
     //accept only the clicks on the canvas (not the ones on the UI)
     canvas.mousePressed(canvasPressed);
     canvas.mouseReleased(canvasReleased);
@@ -456,7 +486,6 @@ function setupGame() {
 
         //paint background
 	background(PAGE_COLOR);
-        hideJoin();
         showUser();
 
         var field = document.getElementById("lobby-field");
@@ -486,11 +515,6 @@ function newGame() {
     if (menuGroup != null)
         menuGroup.removeSprites();
 
-    // if we're lurking and not re logging in, show join/creation screen
-    if (nickName == "" && !relog) {
-        showJoin();
-    } 
-
     //this is not super elegant but I create another socket for the actual game
     //because I've got the data from the server and I don't want to reinitiate everything 
     //if the server restarts
@@ -508,11 +532,6 @@ function newGame() {
     // set width and height of white noise effect
     whiteNoiseAnim.width = WIDTH;
     whiteNoiseAnim.height = HEIGHT;
-    whiteNoiseFrame = whiteNoiseAnim._frames[0];
-
-
-
-    // whiteNoiseAnim.loop();
 
     //paint background
     background(PAGE_COLOR);
@@ -638,7 +657,6 @@ function newGame() {
     socket.on('goneForever',
 	function(p) {
 	  try {
-	    print('forgetting player ' + p.id + ' bc server said so');
 	    let player = players[p.id];
  	    if (!player)
  	      return;
@@ -688,7 +706,6 @@ function newGame() {
                 hideUser();
                 hideColor();
 		hideAvatar();
-                hideJoin();
             }
         }
     );
@@ -766,8 +783,9 @@ function newGame() {
         location.reload(true);
     });
 
-    //I can now open it
+    newGameStartedTime = Date.now();
 
+    //I can now open it
     socket.open();
 
 }
@@ -809,28 +827,23 @@ function update() {
 
         //draw a background
 	// for some reason, background() wasn't drawing the whole background
-	// and i don't feel like debugging that
-        // background(PAGE_COLOR);
 	camera.off();
 	fill(PAGE_COLOR);
-	rect(0, 0, WIDTH, HEIGHT);
+	rect(0, 0, width, height);
+	// background(PAGE_COLOR);
 
-	// todo draw whiteNoiseAnim
-	// p5Gif uses p5.image() under the hood to blit every frame so maybe
-	// we can do something to get the opacity right?
-	tint(255, 50);
-
-	// image(whiteNoiseFrame, 0, 0);
-	// whiteNoiseAnim.next();
+	// // draw slight white noise effect
+	// // yes, there's probably a better way to do this
+	tint(255, 44);
+	imageMode(CENTER);
 	image(whiteNoiseAnim._frames[whiteNoiseAnimIndex++], 
-	  0, 0, whiteNoiseAnim.width, whiteNoiseAnim.height);
+	  width / 2, height / 2, whiteNoiseAnim.width, whiteNoiseAnim.height);
 	if (whiteNoiseAnimIndex >= whiteNoiseAnim._frames.length)
                 whiteNoiseAnimIndex = 0;
 	noTint();
 
 	camera.on();
-
-        textFont(font, FONT_SIZE);
+        // textFont(font, FONT_SIZE);
 
         //iterate through the players
         for (var playerId in players) {
@@ -843,10 +856,32 @@ function update() {
 		    p.updatePosition();
                 }
 
-	      // todo
 		p.updateLabelOpacity();
             }
         }//player update cycle
+
+
+	// update gentle label opacity
+	let too_fast = getUpperTempThreshold();
+	let opacityIncr = .01;
+	let opacityDecr = .03;
+	let temperature = getMouseTemperature();
+
+	print('upper thresh = ' + too_fast);
+	
+	if (!rolledSprite) {
+	  beGentleLabelOpacityPct = 0;
+	}
+
+	// bring up the label if we're stroking too fast
+	else if (nickName != '' && rolledSprite &&
+		   temperature > too_fast) {
+	  beGentleLabelOpacityPct += opacityIncr;
+	} else {
+	  beGentleLabelOpacityPct -= opacityDecr;
+	}
+	beGentleLabelOpacityPct = constrain(beGentleLabelOpacityPct, 0, 1);
+
 
 
         //set the existing sprites' depths in relation to their position
@@ -864,16 +899,12 @@ function update() {
 	  camera.position.y += -dy;
 	}
 
+	// scale(1/canvasScale, 1/canvasScale);
         drawSprites();
 
-        //GUI
+        // GUI
 	
-	let player;
-        if (rolledSprite != null) {
-	  player = players[rolledSprite.id];
-        }
-	
-	// draw labels
+	// draw player labels
         for (var playerId in players) {
             if (players.hasOwnProperty(playerId)) {
                 var p = players[playerId];
@@ -936,6 +967,77 @@ function update() {
 	    }
         }
 
+	// draw be gentle label
+	// need to set these before calling textWidth() for it to work
+	// correctly
+        textFont(font, ACTIVE_FONT_SIZE);
+        textAlign(CENTER, CENTER);
+
+	let padding_x = 7;
+	let padding_y = 5;
+	// todo
+	let opacity = 255 *  beGentleLabelOpacityPct;
+	print('gentle opacity = ' + opacity);
+
+	// draw name label (above circle)
+	let beGentleText = 'be gentle';
+
+	// position it in the middle of the screen for now
+        let lw = textWidth(beGentleText);
+
+	if (rolledSprite) {
+	  beGentleX = rolledSprite.position.x;// p.sprite.position.x;
+	  beGentleY = rolledSprite.position.y; // p.sprite.position.y - 
+	}
+
+
+	let lx = beGentleX;
+	let ly = beGentleY;
+
+	// draw background rectangle
+        fill(0, 0, 0, opacity);
+        noStroke();
+	rectMode(CENTER);
+        rect(floor(lx), floor(ly), 
+	     lw + padding_x*2, 
+	     ACTIVE_FONT_SIZE + padding_y*2);
+
+	// draw text
+        fill(255, 255, 255, opacity);
+        text(beGentleText, floor(lx), floor(ly));
+	    
+	camera.off();
+
+	// draw black letterboxes around main screen
+	// this covers up players so that they don't fade in to dark
+	// with the border mask, but then pop out the other size
+	fill('black');
+
+	let margin;
+	if (landscapeMode) {
+	  margin = (width - NATIVE_SIZE) / 2;
+	  // left box
+	  rect(0, 0, margin, height);
+	  // right box
+	  rect(margin + NATIVE_SIZE, 0, margin, height);
+	} else {
+	  margin = (height - NATIVE_SIZE) / 2;
+	  // top box
+	  rect(0, 0, width, margin);
+	  // bottom box
+	  rect(0, margin + NATIVE_SIZE, width, margin);
+	}
+
+	// fuzzy border mask
+	noTint();
+	imageMode(CENTER);
+	image(borderMask, width/2, height/2);
+
+
+	gentleSlider.position(camera.x + 50, camera.y + 50);
+
+	camera.on();
+
         //long text above everything
         if (longText != "" && nickName != "") {
 
@@ -967,6 +1069,7 @@ function update() {
                 //measuring text height requires a PhD so we
                 //require the user to do trial and error and counting the lines
                 //and use some magic numbers
+		// lol
 
                 var tw = LONG_TEXT_BOX_W - LONG_TEXT_PADDING * 2;
                 var th = longTextLines * TEXT_LEADING;
@@ -989,6 +1092,7 @@ function update() {
             }
         }//end long text
 
+
         if (nickName == "" && (logoCounter < LOGO_STAY || LOGO_STAY == -1)) {
             logoCounter += deltaTime;
 
@@ -1001,7 +1105,7 @@ function update() {
             fill(255);
 	    stroke(0);
 	    strokeWeight(1);
-	    text('souls', WIDTH/2, HEIGHT/2);
+	    // text('souls', WIDTH/2, HEIGHT/2);
 	    camera.on();
 	    
             // animation(logo, floor(width / 2), floor(height / 2));
@@ -1042,7 +1146,7 @@ function activityLabel(player) {
     return 'active ' + hours + 'h ago';
   }
   
-  // if away for more than 8 hours, we vague
+  // if away for more than 8 hours, we vague like fb
   return 'active a while ago';
 }
 
@@ -1053,24 +1157,47 @@ function windowResized() {
 }
 
 
+// scale to the smallest dimension
+// we're trying to fit our square canvas into whatever the form factor
+// is (i.e. portrait for phone, landscape for laptop)
+//
+// if, for example, we're in a portrait window:
+//  _________ 
+// |_ _ _ _ _| <- this padding on top (and bottom) is also part 
+// |         |    of the p5 canvas
+// |"canvas" | <- this square part is our "canvas"
+// |         |    although we extend the true p5 canvas to the whole window
+// |_ _ _ _ _| 
+// |_________| 
+//
+// our "canvas" is always a square with sides of length NATIVE_SIZE
 function scaleCanvas() {
-    //landscape scale to height
+
+    let aspectRatio = windowWidth / windowHeight;
+    
+    // landscape
     if (windowWidth > windowHeight) {
-        canvasScale = windowHeight / WIDTH; //scale to W because I want to leave room for chat and instructions (squareish)
-        canvas.style("width", WIDTH * canvasScale + "px");
-        canvas.style("height", HEIGHT * canvasScale + "px");
+	landscapeMode = true;
+        canvasScale = windowHeight / NATIVE_SIZE;
+	height = NATIVE_SIZE;
+	width = NATIVE_SIZE * (windowWidth / windowHeight);
     }
+    // portrait
     else {
+	landscapeMode = false;
         canvasScale = windowWidth / WIDTH;
-        canvas.style("width", WIDTH * canvasScale + "px");
-        canvas.style("height", HEIGHT * canvasScale + "px");
+	width = NATIVE_SIZE
+	height = NATIVE_SIZE * (windowHeight / windowWidth);
     }
+
+    resizeCanvas(width, height);
+
+    // stretch that canvas across the entire window
+    canvas.style("width", windowWidth + "px");
+    canvas.style("height", windowHeight + "px");
 
     var container = document.getElementById("canvas-container");
-    container.setAttribute("style", "width:" + WIDTH * canvasScale + "px; height: " + HEIGHT * canvasScale + "px");
-
-    var form = document.getElementById("interface");
-    form.setAttribute("style", "width:" + WIDTH * canvasScale + "px;");
+    container.setAttribute("style", "width:" + windowWidth + "px; height: " + windowHeight + "px");
 
 }
 
@@ -1240,29 +1367,38 @@ function Player(p) {
     // the idea is that in order to see someone's activity, you have to
     // tenderly stroke their avatar with your cursor
     //
-    // above a certain "mouse temperature" threshold, the opacity should be
-    // driven
-    // to be "max opaqueness"
-    // (which depends on how long they've been active for)
-    // and under that mouse movement threshold, it sort of naturally
-    // fades back to transparent
+    // "mouse temperature" means how fast the cursor is being moved
+    // if you shake the mouse erratically, you get a high mouse temperature
+    // if the mouse is not moving, the mouse temperature is 0
+    //
+    // to reveal the label, you have to move the mouse at just the right 
+    // speed, not too fast not too slow
     this.updateLabelOpacity = function () {
-      let too_fast = 1.2;
-      let too_slow = .9;
+      // let too_fast = 1.2;
+      // let too_slow = .9;
+      let too_fast = getUpperTempThreshold();
+      let too_slow = getLowerTempThreshold();
       let opacityIncr = .015;
       let opacityDecr = .003;
 
       let temperature = getMouseTemperature();
+
+      print('temp = ' + temperature);
       
       // increment when the cursor is stroking us tenderly
       if (nickName != '' && this.sprite.mouseIsOver &&
-	  temperature < too_fast && temperature > too_slow) {
+	  temperature <= too_fast && temperature >= too_slow) {
 	  this.labelOpacityPct += opacityIncr;
+
+	  // this will only increment when mouse is at a tender temp
+	  // but that's probabably okay
+	  framesSpentHovering += 1;
       }
       // otherwise, fade into nothingness
       else {
         this.labelOpacityPct -= opacityDecr;
       }
+
       this.labelOpacityPct = constrain(this.labelOpacityPct, 0, 1);
     }
 
@@ -1270,6 +1406,7 @@ function Player(p) {
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
             rolledSprite = this;
+	    cursor('grab');
 	    // hoverTimer = 0;
 	    // labelOpacityPct = 0;
         };
@@ -1277,6 +1414,8 @@ function Player(p) {
         this.sprite.onMouseOut = function () {
             if (rolledSprite == this)
                 rolledSprite = null;
+	    // cursor(ARROW);
+	    cursor();
         };
 
         this.sprite.onMousePressed = function () {
@@ -1294,6 +1433,8 @@ function Player(p) {
 	      return;
 
             tint(255, opacityFromActivity(player));
+
+	    // ellipse(0, 0, 40, 40);
 
             this.originalDraw();
             noTint();
@@ -1319,7 +1460,7 @@ function opacityFromActivity(p) {
   let time_inactive_ms = Date.now() - p.lastTimeActive;
 
   // exponential decay (so it's a steeper drop off at the beginning)
-  // it's more ~natural~ than linear decay
+  // also it's more ~~natural~~ than linear decay
   // tau_ms is the time it takes for opacity to get to ~.36 of starting value
   // ty wikipedia https://en.wikipedia.org/wiki/Exponential_decay
   let tau_ms = max_time_inactive_ms*.6;
@@ -1331,6 +1472,65 @@ function opacityFromActivity(p) {
 // maybe a function that given a player and percent (i.e. number from 0 to 1)
 function getMouseTemperature() {
   return mag(movedX, movedY);
+}
+
+// honestly, i probably could just make them snap to thresholds after a bit
+// but whtever i already coded this and it works good enough
+
+// try to time this with however long it takes for the label to fully appear
+// (roughly)
+function getLowerTempThreshold() {
+
+  //
+  //   |               
+  //   |                /
+  //   |    thresh->  /
+  //   |            /
+  //   |          /
+  // 0 |________/_______
+  //      elbow^
+  //      framesSpentHovering
+  let elbow = 100;
+
+  let thresh = 0;
+  if (framesSpentHovering < elbow) {
+    thresh = 0;
+  } else {
+    thresh = constrain((framesSpentHovering - elbow) / 100, 0, .9);
+  }
+
+  // remember that we want to end on .9
+  return thresh;
+}
+
+// and this one maybe we only lower it when the player is hovering AND moving
+// the mouse (which they will be ofrced to do when we raise the lower 
+// threshold)
+function getUpperTempThreshold() {
+
+  // return 1.2;
+  // realistically, can never really go over 200 (almost never above 100)
+  let initial = 200;
+
+  
+  // this gets to 2 in a couple seconds
+  let thresh = constrain(initial - framesSpentHovering*5, 2, initial);
+
+  // then we step down to 1.5 at the 30 second mark
+  // (you have to rub pretty slowly for 1.5, but it's doable i think)
+  let now = Date.now();
+  if (now - newGameStartedTime > 30*1000) {
+    thresh = 1.5;
+  }
+  
+  // then step down again to 1.2 at 3 minute mark
+  // (you have to be really slow for 1.2, so give the player some time to
+  // get invested before we make it almost cruelly hard lol)
+  if (now - newGameStartedTime > 3*60*1000) {
+    thresh = 1.2;
+  }
+
+  return thresh;
 }
 
 
@@ -1409,10 +1609,12 @@ function canvasPressed() {
 //when I click to move
 function canvasReleased() {
 
-    //print("CLICK " + mouseButton);
-
     isPanning = false;
     if (screen == "error") {
+    }
+    else if (nickName == "" && screen == "game") {
+      // we're lurking and we click on screen, so go to prompt for user
+      joinGame();
     }
     else if (nickName != "" && screen == "game" && mouseButton == RIGHT) {
         if (me.destinationX == me.x && me.destinationY == me.y) {
@@ -1547,7 +1749,6 @@ function getCommand(c) {
 
 function executeCommand(c) {
     areaLabel = "";
-    //print("Executing command " + c.cmd);
 
     switch (c.cmd) {
         case "enter":
@@ -1610,7 +1811,6 @@ function nameOk() {
 
 function nameValidationCallBack(code) {
 
-    print('name validation callback!');
     if (socket.id) {
 
         if (code == 0) {
@@ -1716,9 +1916,6 @@ function tintGraphics(img, colorString) {
 //join from lurk mode
 function joinGame() {
 
-    deleteAllSprites();
-    hideJoin();
-
     if (QUICK_LOGIN) {
         //assign random name and avatar and get to the game
         nickName = "user" + floor(random(0, 1000));
@@ -1812,15 +2009,6 @@ function hideAvatar() {
         e.style.display = "none";
 }
 
-function showJoin() {
-    document.getElementById("join-form").style.display = "block";
-}
-
-function hideJoin() {
-    document.getElementById("join-form").style.display = "none";
-}
-
-
 function outOfCanvas() {
     areaLabel = "";
     rolledSprite = null;
@@ -1839,6 +2027,9 @@ document.addEventListener("touchmove", preventBehavior, { passive: false });
 window.addEventListener('focus', function () {
     if (socket != null && me != null)
         socket.emit('focus', { });
+
+    // when a player re-focuses, they're prooooobably not over a circle
+    cursor();
 });
 
 // Inactive
