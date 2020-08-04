@@ -255,6 +255,8 @@ var framesSpentHovering = 0;
 var beGentleLabelOpacityPct = 0;
 var beGentleX = 0;
 var beGentleY = 0;
+// this is currently only used for detecting things for the "be gentle" label
+var lastRolledSprite = null;
 
 var gentleSlider;
 
@@ -506,6 +508,7 @@ function newGame() {
     nextCommand = null;
     areaLabel = "";
     rolledSprite = null;
+    lastRolledSprite = null;
     logoCounter = 0;
 
     hideUser();
@@ -594,6 +597,7 @@ function newGame() {
                 //if it's me///////////
                 if (socket.id == p.id) {
                     rolledSprite = null;
+                    lastRolledSprite = null;
 
                     players = {};
 
@@ -605,16 +609,13 @@ function newGame() {
 		    camera.position.x = me.x;
 		    camera.position.y = me.y;
 
-
                 }//it me
                 else {
-		    
 		    // register new player
                     players[p.id] = new Player(p);
                 }
 
                 if (p.new && p.nickName != "" && firstLog) {
-
                     firstLog = false;
                 }
 
@@ -638,6 +639,7 @@ function newGame() {
 	    if (players[p.id] && players[p.id].sprite != null) {
 	      if (players[p.id].sprite == rolledSprite) {
                 rolledSprite = null;
+                lastRolledSprite = null;
 	      }
 	      removeSprite(players[p.id].sprite);
 	    }
@@ -796,7 +798,7 @@ function newGame() {
 function update() {
 
     if (screen == "user") {
-	background(PAGE_COLOR);
+
     }
     //renders the avatar selection screen which can be fully within the canvas
     else if (screen == "avatar") {
@@ -808,10 +810,7 @@ function update() {
 
         text('choose your color', WIDTH / 2, HEIGHT * .2);
 
-      
-
         menuGroup.draw();
-
     }
     else if (screen == "error") {
         //end state, displays a message in full screen
@@ -867,22 +866,14 @@ function update() {
 	let opacityDecr = .03;
 	let temperature = getMouseTemperature();
 
-	print('upper thresh = ' + too_fast);
-	
-	if (!rolledSprite) {
-	  beGentleLabelOpacityPct = 0;
-	}
-
 	// bring up the label if we're stroking too fast
-	else if (nickName != '' && rolledSprite &&
+	if (nickName != '' && rolledSprite &&
 		   temperature > too_fast) {
 	  beGentleLabelOpacityPct += opacityIncr;
 	} else {
 	  beGentleLabelOpacityPct -= opacityDecr;
 	}
 	beGentleLabelOpacityPct = constrain(beGentleLabelOpacityPct, 0, 1);
-
-
 
         //set the existing sprites' depths in relation to their position
         for (var i = 0; i < allSprites.length; i++) {
@@ -975,7 +966,6 @@ function update() {
 
 	let padding_x = 7;
 	let padding_y = 5;
-	// todo
 	let opacity = 255 *  beGentleLabelOpacityPct;
 	print('gentle opacity = ' + opacity);
 
@@ -1406,14 +1396,17 @@ function Player(p) {
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
             rolledSprite = this;
+	    if (lastRolledSprite != rolledSprite) {
+	      beGentleLabelOpacityPct = 0;
+	    }
 	    cursor('grab');
-	    // hoverTimer = 0;
-	    // labelOpacityPct = 0;
         };
 
         this.sprite.onMouseOut = function () {
-            if (rolledSprite == this)
+            if (rolledSprite == this) {
+		lastRolledSprite = rolledSprite;
                 rolledSprite = null;
+	    }
 	    // cursor(ARROW);
 	    cursor();
         };
@@ -1825,7 +1818,7 @@ function nameValidationCallBack(code) {
             var e = document.getElementById("lobby-error");
 
             if (e != null)
-                e.innerHTML = "Sorry, only standard western characters are allowed";
+                e.innerHTML = "Sorry, only standard western characters are allowed :/";
         }
         else {
 

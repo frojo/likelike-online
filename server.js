@@ -242,7 +242,6 @@ io.on('connection', function (socket) {
 		    print('new player ' + playerInfo.nickName + '\'s position = ' + position.x + ', ' + position.y);
 		    
 
-		    // todo: timestamp
 		    // Date.now() and new Date().getTime() do the same thing
 		    // return number of milliseconds since 1/1/70
 		    // so it's an integer
@@ -276,7 +275,6 @@ io.on('connection', function (socket) {
 		    for (var id in gameState.players) {
     		        if (id != newPlayer.id &&
 			    gameState.players.hasOwnProperty(id)) {
-			  // todo: filter out lurkers?
 			  let player = gameState.players[id];
 			  if (player.nickname != "") {
 			      console.log('sending new player info about player ' + id);
@@ -339,7 +337,6 @@ io.on('connection', function (socket) {
 
     //user afk
     socket.on('focus', function (obj) {
-	// todo: change activeness
         try {
 	    let player = gameState.players[socket.id];
 	    if (player) {
@@ -353,7 +350,6 @@ io.on('connection', function (socket) {
     });
 
     socket.on('blur', function (obj) {
-	// todo: change activeness
         try {
 	    let player = gameState.players[socket.id];
 	    if (player) {
@@ -390,18 +386,56 @@ setInterval(function () {
 
 
 // bias towards being near people that recently logged on for the first time
+// but not TOO near. we don't want to overlap with anybody else or feel
+// claustrophobic
 // returns an object with properties x and y
 function newPlayerPosition() {
+  // keeps trying to get a new position
   let newPos = randomPointOnCircle(mostRecentPlayerPos, 200);
+  // this is so that we don't hang forever
+  let failSafe = 0;
+  while (!sociallyDistanced(newPos)) {
+    if (failSafe > 100) {
+      print('DEPLOYED FAILSAFE');
+      break;
+    }
+    newPos = randomPointOnCircle(mostRecentPlayerPos, 200);
+    failSafe++;
+  }
+
   mostRecentPlayerPos = newPos;
   return newPos;
 }
 
-
+// does what it says on the tin
 function randomPointOnCircle(center, r) {
   let theta = Math.random() * 2*Math.PI;
   return {x: center.x + r*Math.cos(theta),
 	  y: center.y + r*Math.sin(theta)};
+}
+
+// returns true iff this position is far enough away from any extant players
+function sociallyDistanced(pos) {
+  let socialDistance = 100;
+
+  for (var id in gameState.players) {
+    if (gameState.players.hasOwnProperty(id)) {
+      let x1 = gameState.players[id].x;
+      let y1 = gameState.players[id].y;
+
+      let x2 = pos.x;
+      let y2 = pos.y;
+	
+      // distance check using trick to avoid Math.sqrt()
+      if (socialDistance*socialDistance >=
+	  (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1-y2))
+      {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 
