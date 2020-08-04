@@ -25,6 +25,8 @@ If the VERSION vars are mismatched they will send all clients in an infinite ref
 */
 var VERSION = "1.0";
 
+var DEVMODE = false;
+
 //create a web application that uses the express frameworks and socket.io to communicate via http (the web protocol)
 var express = require('express');
 var app = express();
@@ -41,7 +43,7 @@ var MAX_NAME_LENGTH = 16;
 var MAX_PLAYERS = -1;
 
 // players who rejoin are remembered (only turn off for debugging)
-var REMEMBER_IPS = false;
+var REMEMBER_IPS = DEVMODE;
 
 //views since the server started counts relogs
 var visits = 0;
