@@ -43,7 +43,7 @@ var MAX_NAME_LENGTH = 16;
 var MAX_PLAYERS = -1;
 
 // players who rejoin are remembered (only turn off for debugging)
-var REMEMBER_IPS = DEVMODE;
+var REMEMBER_IPS = !DEVMODE;
 
 //views since the server started counts relogs
 var visits = 0;
