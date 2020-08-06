@@ -161,10 +161,6 @@ var hoverTimer = 0;
 // label that is being hovered over currently
 var labelOpacityPct = 0;
 
-// this basically measures how "move-y" he mouse is -- how much is it currently
-// moving, or how much has it moved in the last few seconds
-var mouseTemperature = 0;
-
 //GUI
 //shows up at the beginning, centered, overlapped to room in lurk mode
 var logo;
@@ -864,7 +860,7 @@ function update() {
 	let too_fast = getUpperTempThreshold();
 	let opacityIncr = .01;
 	let opacityDecr = .03;
-	let temperature = getMouseTemperature();
+	let temperature = getTemperature();
 
 	// bring up the label if we're stroking too fast
 	if (nickName != '' && rolledSprite &&
@@ -901,100 +897,35 @@ function update() {
                 var p = players[playerId];
 		// draw rollover labels
 		if (p && p.nickName != '' && !goneForever(p)) {
-		  // need to set these before calling textWidth() for it to work
-	       	  // correctly
-               	  textFont(font, ACTIVE_FONT_SIZE);
-               	  textAlign(CENTER, CENTER);
-
-	       	  let padding_x = 7;
-	       	  let padding_y = 5;
-	       	  let opacity = p.labelOpacityPct*opacityFromActivity(p);
-
-	       	  // draw name label (above circle)
-	       	  let nameText = p.nickName;
-
-	       	  // we position the text below the rolled over sprite
-               	  let lw = textWidth(nameText);
+		  // draw nama label
 	       	  let lx = p.sprite.position.x;
 	       	  let ly = p.sprite.position.y - 
 	       	           p.sprite.collider.size().y*.5;
 
-	       	  // draw background rectangle
-               	  fill(0, 0, 0, opacity);
-               	  noStroke();
-	       	  rectMode(CENTER);
-               	  rect(floor(lx), floor(ly), 
-	       	       lw + padding_x*2, 
-	       	       ACTIVE_FONT_SIZE + padding_y*2);
-
-	       	  // draw text
-               	  fill(255, 255, 255, opacity);
-               	  text(nameText, floor(lx), floor(ly));
+		  drawLabel(p.nickName, lx, ly, 
+			    p.labelOpacityPct*opacityFromActivity(p));
 
 	       	  // don't show activity for myself
 	       	  if (me != null && me.sprite != p.sprite) {
 	       	    // draw activity label (below circle)
-	       	    activityText = activityLabel(p);
-
-	       	    // we position the name above over sprite
-               	    let lw = textWidth(activityText);
 	       	    let lx = p.sprite.position.x;
 	       	    let ly = p.sprite.position.y + 
 	       	             p.sprite.collider.size().y*.5;
 
-	       	    // draw background rectangle
-               	    fill(0, 0, 0, opacity);
-               	    noStroke();
-	       	    rectMode(CENTER);
-               	    rect(floor(lx), floor(ly), 
-	       	         lw + padding_x*2,
-	       	         ACTIVE_FONT_SIZE + padding_y*2);
-
-	       	    // draw text
-               	    fill(255, 255, 255, opacity);
-               	    text(activityText, floor(lx), floor(ly));
+		    drawLabel(activityLabel(p), lx, ly, 
+			    p.labelOpacityPct*opacityFromActivity(p));
 	       	  }
 		}
 	    }
         }
 
 	// draw be gentle label
-	// need to set these before calling textWidth() for it to work
-	// correctly
-        textFont(font, ACTIVE_FONT_SIZE);
-        textAlign(CENTER, CENTER);
-
-	let padding_x = 7;
-	let padding_y = 5;
-	let opacity = 255 *  beGentleLabelOpacityPct;
-	print('gentle opacity = ' + opacity);
-
-	// draw name label (above circle)
-	let beGentleText = 'be gentle';
-
-	// position it in the middle of the screen for now
-        let lw = textWidth(beGentleText);
-
 	if (rolledSprite) {
-	  beGentleX = rolledSprite.position.x;// p.sprite.position.x;
-	  beGentleY = rolledSprite.position.y; // p.sprite.position.y - 
+	  beGentleX = rolledSprite.position.x;
+	  beGentleY = rolledSprite.position.y;
 	}
-
-
-	let lx = beGentleX;
-	let ly = beGentleY;
-
-	// draw background rectangle
-        fill(0, 0, 0, opacity);
-        noStroke();
-	rectMode(CENTER);
-        rect(floor(lx), floor(ly), 
-	     lw + padding_x*2, 
-	     ACTIVE_FONT_SIZE + padding_y*2);
-
-	// draw text
-        fill(255, 255, 255, opacity);
-        text(beGentleText, floor(lx), floor(ly));
+	drawLabel('be gentle', beGentleX, beGentleY, 
+		  beGentleLabelOpacityPct*255);
 	    
 	camera.off();
 
@@ -1104,6 +1035,32 @@ function update() {
     }//end game
 
 
+}
+
+// given a string <s>, draws a label at <x>, <y>, with <opacity>
+function drawLabel(s, lx, ly, opacity) {
+	// need to set these before calling textWidth() for it to work
+	// correctly
+        textFont(font, ACTIVE_FONT_SIZE);
+        textAlign(CENTER, CENTER);
+
+	let padding_x = 7;
+	let padding_y = 5;
+
+	// position it in the middle of the screen for now
+        let lw = textWidth(s);
+
+	// draw background rectangle
+        fill(0, 0, 0, opacity);
+        noStroke();
+	rectMode(CENTER);
+        rect(floor(lx), floor(ly), 
+	     lw + padding_x*2, 
+	     ACTIVE_FONT_SIZE + padding_y*2);
+
+	// draw text
+        fill(255, 255, 255, opacity);
+        text(s, floor(lx), floor(ly));
 }
 
 // checks if player has been gone for more than 24 hours
@@ -1371,7 +1328,7 @@ function Player(p) {
       let opacityIncr = .015;
       let opacityDecr = .003;
 
-      let temperature = getMouseTemperature();
+      let temperature = getTemperature();
 
       print('temp = ' + temperature);
       
@@ -1462,8 +1419,12 @@ function opacityFromActivity(p) {
   return opacity;
 }
 
-// maybe a function that given a player and percent (i.e. number from 0 to 1)
-function getMouseTemperature() {
+// returns the mouse or touch "temperature" aka how much movement there is
+// erratically moving your mouse around is high temperature, not moving 
+// at all is 0 temperature
+function getTemperature() {
+  // todo:
+  // we support both mouse movement (movedX, movedY) and touch movement
   return mag(movedX, movedY);
 }
 
@@ -1538,6 +1499,9 @@ function deleteAllSprites() {
 //touchDown prevents duplicate event firings
 var touchDown = false;
 
+
+// every frame, we want to somehow save the touch position
+// we need to remember the touch position from last frame to calc temperature
 
 function touchStarted() {
     touchDown = true;
