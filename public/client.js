@@ -1538,12 +1538,12 @@ function deleteAllSprites() {
 //touchDown prevents duplicate event firings
 var touchDown = false;
 
-function mouseDragged() {
-    mouseMoved();
+
+function touchStarted() {
+    touchDown = true;
 }
 
 function touchMoved() {
-    mouseMoved();
     touchDown = true;
 }
 
@@ -1555,39 +1555,6 @@ function touchEnded() {
     }
 }
 
-//rollover state
-function mouseMoved() {
-
-    if (walkIcon != null)
-        walkIcon.visible = false;
-
-    if (areas != null && me != null) {
-
-        //you know, at this point I'm not sure if you are using assets scaled by 2 for the areas
-        //so I'm just gonna stretch the coordinates ok
-        var mx = floor(map(mouseX, 0, WIDTH, 0, areas.width));
-        var my = floor(map(mouseY, 0, HEIGHT, 0, areas.height));
-
-        var c = areas.get(mx, my);
-        areaLabel = "";
-
-        if (alpha(c) != 0) {
-            //walk icon?
-            if (c[0] == 255 && c[1] == 255 && c[2] == 255) {
-                if (walkIcon != null)
-                    walkIcon.visible = true;
-            }
-            else {
-                var command = getCommand(c);
-                if (command != null)
-                    if (command.label != null) {
-                        areaLabel = command.label;
-                    }
-            }
-        }
-
-    }
-}
 
 function canvasPressed() {
 
@@ -1597,7 +1564,6 @@ function canvasPressed() {
 
     }
 }
-
 
 //when I click to move
 function canvasReleased() {
