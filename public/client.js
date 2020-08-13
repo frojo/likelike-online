@@ -793,6 +793,9 @@ function newGame() {
 //this p5 function is called continuously 60 times per second by default
 function update() {
 
+    // print('mouseX = ' + mouseX);
+    // print('movedX = ' + movedX);
+
     if (screen == "user") {
 
     }
@@ -1140,8 +1143,10 @@ function scaleCanvas() {
     resizeCanvas(width, height);
 
     // stretch that canvas across the entire window
-    canvas.style("width", windowWidth + "px");
-    canvas.style("height", windowHeight + "px");
+    //if (canvas) {
+      canvas.style("width", windowWidth + "px");
+      canvas.style("height", windowHeight + "px");
+    //}
 
     var container = document.getElementById("canvas-container");
     container.setAttribute("style", "width:" + windowWidth + "px; height: " + windowHeight + "px");
@@ -1312,7 +1317,8 @@ function Player(p) {
     }
 
     // the idea is that in order to see someone's activity, you have to
-    // tenderly stroke their avatar with your cursor
+    // tenderly stroke their avatar with your cursor (/finger on touch device)
+    // uWu
     //
     // "mouse temperature" means how fast the cursor is being moved
     // if you shake the mouse erratically, you get a high mouse temperature
@@ -1330,7 +1336,7 @@ function Player(p) {
 
       let temperature = getTemperature();
 
-      print('temp = ' + temperature);
+      // print('temp = ' + temperature);
       
       // increment when the cursor is stroking us tenderly
       if (nickName != '' && this.sprite.mouseIsOver &&
@@ -1396,11 +1402,11 @@ function Player(p) {
 
 }
 
-// calculates oppacity of player sprite based on how long they've been inactive
-// 255 is completely opaque, 0 is transparent
-// a player's sprite is completely opaque when they're active
+// calculates oppacity of player sprite based on how long they've been inactive.
+// 255 is completely opaque, 0 is transparent.
+// a player's sprite is completely opaque when they're active.
 // when they become inactive, there's an immediate drop-off in opacity, and
-// then an exponential decay until the sprite
+// then an exponential decay until the sprite.
 // fades into complete nothingness at around 24h
 function opacityFromActivity(p) {
   if (p.active)
@@ -1419,13 +1425,16 @@ function opacityFromActivity(p) {
   return opacity;
 }
 
-// returns the mouse or touch "temperature" aka how much movement there is
+// returns the mouse or touch "temperature" aka how much it's moving.
 // erratically moving your mouse around is high temperature, not moving 
 // at all is 0 temperature
 function getTemperature() {
   // todo:
   // we support both mouse movement (movedX, movedY) and touch movement
-  return mag(movedX, movedY);
+  if (!touchDown && movedX && movedY) {
+    return mag(movedX, movedY);
+  }
+  return 0;
 }
 
 // honestly, i probably could just make them snap to thresholds after a bit
@@ -1495,35 +1504,207 @@ function deleteAllSprites() {
 
 
 //on mobile there is no rollover so allow a drag to count as mouse move
-//the two functions SHOULD be mutually exclusive
+//the two functions SHOULD be mutually exclusive (but i think aren't)
 //touchDown prevents duplicate event firings
 var touchDown = false;
+var twoFingerTouch = false;
+var touchPinch = false;
+var touchPan = false;
+
+
+var firstFrameTouchDist = 0;
+var pTouchPanPos = {x : 0, y: 0};
+var pTouchPinchDist = 0;
 
 
 // every frame, we want to somehow save the touch position
 // we need to remember the touch position from last frame to calc temperature
+//
+function mouseClicked() {
+  print('mouse clicked');
+  
+
+}
+
 
 function touchStarted() {
-    touchDown = true;
+    // this is the real check for touch. 
+    // for some reaosn touchStarted() is called when i click the mouse on
+    // my laptop. and mouseClicked() is called when i touch on my phone
+    // so this is a workaround...
+    if (touches.length >= 1) {
+
+      // print('touch started!!!');
+      touchDown = true;
+      // canvasPressed();
+      if (touches.length == 2) {
+	twoFingerTouchStarted();
+      }
+    }
+    // print('touches = ' + touches.length);
 }
 
 function touchMoved() {
-    touchDown = true;
+    if (touchDown) {
+      // print('touch moved!!!');
+      if (twoFingerTouch) {
+	// print('two finger touch move!')
+
+
+	// on the first frame that we /move/ with two finger touch, we
+	// determine if it's a pan or a pinch.
+	// (works similarly to Google Maps on iOS 11.4.1 Aug. 2020)
+	if (!touchPinch && !touchPan) {
+	  twoFingerTouchDetectPanOrPinch()
+
+
+	} else if (touchPinch) {
+	  touchPinchMoved();
+	} else if (touchPan) {
+	  touchPanMoved();
+	}
+      }
+    }
+    // touchDown = true;
 }
 
 function touchEnded() {
 
-    if (touchDown) {
-        touchDown = false;
-        canvasReleased();
-    }
+
+  // print('on touch end, touches length = ' + touches.length);
+
+  // all fingers (and bets) are off
+  if (touches.length == 0)  {
+    touchDown = false;
+    twoFingerTouch = false;
+    touchPinch = false;
+    touchPan = false;
+
+  // lifted some fingers but still one remains
+  } else if (touches.length == 1) {
+    touchDown = true;
+    twoFingerTouch = false;
+    touchPinch = false;
+    touchPan = false;
+  }
+}
+
+// calculates distance between two (x,y) points.
+// takes two objects, each of which must have properties x and y
+function calcDist(xy0, xy1) {
+  // p5js sqrt() uses Math.sqrt(), which is actually pretty fast??
+  // https://jsperf.com/math-hypot-vs-math-sqrt/6
+  // don't @ me
+  return sqrt(sq(xy0.x - xy1.x) + 
+	      sq(xy0.y - xy1.y));
+}
+
+function twoFingerTouchStarted() {
+  // print('two finger touch start!');
+  twoFingerTouch = true;
+
+  firstFrameTouchDist = calcDist(touches[0], touches[1]);
+}
+
+// on the first frame of two-finger touch, we determine if it's a
+// pinch (fingers moving apart/together) or a pan (fingers moving together
+// in the same direction)
+function twoFingerTouchDetectPanOrPinch() {
+  // ¯\_(ツ)_/¯
+  let panThresh = 8;
+
+  let secondFrameDist = calcDist(touches[0], touches[1]);
+  let diff = abs(firstFrameTouchDist - secondFrameDist);
+
+  // print('first frame dist = ' + TouchfirstFrameDist);
+  // print('second frame dist = ' + secondFrameDist);
+  // print('dist diff = ' + diff);
+
+  if (abs(firstFrameTouchDist - secondFrameDist) < panThresh) {
+    touchPanStart();
+  } else {
+    touchPinchStart();
+  }
+   
+}
+
+function touchPinchStart() {
+  touchPinch = true;
+  pTouchPinchDist = calcDist(touches[0], touches[1]);
+}
+
+function touchPinchMoved() {
+  print('still pinching');
+
+  let zoomSpeed = 1.1;
+  let maxZoom = 8;
+  let minZoom = .5;
+
+  let touchPinchDist = calcDist(touches[0], touches[1]);
+  let zoomDiff = pTouchPinchDist - touchPinchDist;
+  // zoomDiff = zoomDiff / zoomSpeed;
+
+  print('zoomDiff = ' + zoomDiff);
+
+  let zoomScale = 1;
+  if (zoomDiff < 0) {
+    zoomScale = zoomSpeed;
+  } else {
+    zoomScale = 1/zoomSpeed;
+  }
+
+  camera.zoom = constrain(camera.zoom * zoomScale, minZoom, maxZoom);
+  print('camera.zoom = ' + camera.zoom);
+
+}
+
+function touchPanStart() {
+  touchPan = true;
+  // print('detected panning!!!!!!!');
+
+  // get the midpoint of the touches, this is our virtual position
+  pTouchPanPos.x = (touches[0].x + touches[1].x) / 2;
+  pTouchPanPos.y = (touches[0].y + touches[1].y) / 2;
+}
+
+function touchPanMoved() {
+  let panSpeed = 1;
+  panSpeed = panSpeed / camera.zoom;
+
+  let touchPanPos = {x: 0, y: 0};
+  touchPanPos.x = (touches[0].x + touches[1].x) / 2;
+  touchPanPos.y = (touches[0].y + touches[1].y) / 2;
+
+  let dx = touchPanPos.x - pTouchPanPos.x;
+  let dy = touchPanPos.y - pTouchPanPos.y;
+
+  dx = dx * panSpeed;
+  dy = dy * panSpeed;
+
+  camera.position.x += -dx;
+  camera.position.y += -dy;
+
+  pTouchPanPos = touchPanPos;
+}
+
+function touchPinchEnded() {
+  touchPinch = false;
+}
+
+function touchPanEnded() {
+  touchPan = false;
+}
+
+function twoFingerTouchEnded() {
+  print('two finger touch end!');
+  twoFingerTouch = false;
 }
 
 
 function canvasPressed() {
 
     if (nickName != "" && screen == "game") {
-      console.log('canvas pressed!');
+      ////  console.log('canvas pressed!');
       isPanning = true;
 
     }
