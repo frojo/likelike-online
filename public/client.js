@@ -260,6 +260,9 @@ var gentleSlider;
 // used for tuning mouse temperature tenderness thresholds
 var newGameStarted = 0;
 
+// are we on a touch device?
+var touchDevice = false;
+
 
 /*
 Things are quite asynchronous here. This is the startup sequence:
@@ -866,8 +869,8 @@ function update() {
 	let temperature = getTemperature();
 
 	// bring up the label if we're stroking too fast
-	if (nickName != '' && rolledSprite &&
-		   temperature > too_fast) {
+	if (nickName != '' && rolledSprite 
+	      && temperature > too_fast) {
 	  beGentleLabelOpacityPct += opacityIncr;
 	} else {
 	  beGentleLabelOpacityPct -= opacityDecr;
@@ -902,21 +905,27 @@ function update() {
 		if (p && p.nickName != '' && !goneForever(p)) {
 		  // draw nama label
 	       	  let lx = p.sprite.position.x;
-	       	  let ly = p.sprite.position.y - 
-	       	           p.sprite.collider.size().y*.5;
 
-		  drawLabel(p.nickName, lx, ly, 
+		  // we use sqrt() bc of weird positioning stuff when you
+		  // zoom. look, it works, okay
+	       	  let ly = p.sprite.position.y - 
+	       	           sqrt(p.sprite.collider.size().y)*5.5;
+
+		  drawLabel(p.nickName, lx, ly,
 			    p.labelOpacityPct*opacityFromActivity(p));
 
 	       	  // don't show activity for myself
 	       	  if (me != null && me.sprite != p.sprite) {
 	       	    // draw activity label (below circle)
 	       	    let lx = p.sprite.position.x;
-	       	    let ly = p.sprite.position.y + 
-	       	             p.sprite.collider.size().y*.5;
 
-		    drawLabel(activityLabel(p), lx, ly, 
-			    p.labelOpacityPct*opacityFromActivity(p));
+		    // we use sqrt() bc of weird positioning stuff when you
+		    // zoom. look, it works, okay
+	       	    let ly = p.sprite.position.y + 
+			     sqrt(p.sprite.collider.size().y)*5.5;
+
+		    drawLabel(activityLabel(p), lx, ly,
+			      p.labelOpacityPct*opacityFromActivity(p));
 	       	  }
 		}
 	    }
@@ -1157,9 +1166,11 @@ function colorSelection() {
 
     var randomColor = color(floor(random(255)), floor(random(255)), floor(random(255)));
     colorPicker = createColorPicker(randomColor);
+    colorPicker.class('color-picker-input');
     colorPicker.parent('color-picker-container');
 
     // call setCurrentColor() every time user sets color with color picker
+    // todo
     colorPicker.input(setCurrentColor);
     setCurrentColor();
 }
@@ -1358,6 +1369,9 @@ function Player(p) {
 
     if (this.nickName != "") {
         this.sprite.onMouseOver = function () {
+	    if (touchDown) {
+
+	    }
             rolledSprite = this;
 	    if (lastRolledSprite != rolledSprite) {
 	      beGentleLabelOpacityPct = 0;
@@ -1417,7 +1431,7 @@ function opacityFromActivity(p) {
 
   // exponential decay (so it's a steeper drop off at the beginning)
   // also it's more ~~natural~~ than linear decay
-  // tau_ms is the time it takes for opacity to get to ~.36 of starting value
+  // tau_ms is the time it takes for opacity to get to ~.36 of starting value.
   // ty wikipedia https://en.wikipedia.org/wiki/Exponential_decay
   let tau_ms = max_time_inactive_ms*.6;
   let opacity = 150*exp(-(1/tau_ms)*time_inactive_ms);
@@ -1429,10 +1443,16 @@ function opacityFromActivity(p) {
 // erratically moving your mouse around is high temperature, not moving 
 // at all is 0 temperature
 function getTemperature() {
-  // todo:
-  // we support both mouse movement (movedX, movedY) and touch movement
-  if (!touchDown && movedX && movedY) {
+  // using a mouse
+  if (!touchDevice) {
     return mag(movedX, movedY);
+
+  } 
+  // using touch
+  else {
+    // we divide by 10 because touch is weird
+    let touchTemp = mag(touchMovedX, touchMovedY) / 10;
+    return touchTemp;
   }
   return 0;
 }
@@ -1511,7 +1531,15 @@ var twoFingerTouch = false;
 var touchPinch = false;
 var touchPan = false;
 
+// like pMouseX/Y. the X/Y position of touches[0] for the previous frame
+var pTouchX = 0;
+var pTouchY = 0;
 
+// like movedX/Y
+var touchMovedX = 0;
+var touchMovedY = 0;
+
+// variables for making two-finger pinch and pan work
 var firstFrameTouchDist = 0;
 var pTouchPanPos = {x : 0, y: 0};
 var pTouchPinchDist = 0;
@@ -1528,25 +1556,36 @@ function mouseClicked() {
 
 
 function touchStarted() {
-    // this is the real check for touch. 
-    // for some reaosn touchStarted() is called when i click the mouse on
-    // my laptop. and mouseClicked() is called when i touch on my phone
-    // so this is a workaround...
-    if (touches.length >= 1) {
+  // this is the real check for touch. 
+  // for some reaosn touchStarted() is called when i click the mouse on
+  // my laptop. and mouseClicked() is called when i touch on my phone.
+  // we love it.
+  // so this is a workaround...
+  if (touches.length >= 1) {
+    // sort of a finicky way of detecting touch
+    // but it works question mark?
+    touchDevice = true;
 
-      // print('touch started!!!');
-      touchDown = true;
-      // canvasPressed();
-      if (touches.length == 2) {
-	twoFingerTouchStarted();
-      }
+
+    // print('touch started!!!');
+    touchDown = true;
+    pTouchX = touches[0].x;
+    pTouchY = touches[0].y;
+    // canvasPressed();
+    if (touches.length == 2) {
+      twoFingerTouchStarted();
     }
-    // print('touches = ' + touches.length);
+  }
+  // print('touches = ' + touches.length);
 }
 
 function touchMoved() {
     if (touchDown) {
       // print('touch moved!!!');
+      touchMovedX = touches[0].x - pTouchX;
+      touchMovedY = touches[0].y - pTouchY;
+      pTouchX = touches[0].x;
+      pTouchY = touches[0].y;
       if (twoFingerTouch) {
 	// print('two finger touch move!')
 
@@ -1579,6 +1618,8 @@ function touchEnded() {
     twoFingerTouch = false;
     touchPinch = false;
     touchPan = false;
+    touchMovedX = 0;
+    touchMovedY = 0;
 
   // lifted some fingers but still one remains
   } else if (touches.length == 1) {
@@ -1634,7 +1675,7 @@ function touchPinchStart() {
 }
 
 function touchPinchMoved() {
-  print('still pinching');
+  // print('still pinching');
 
   let zoomSpeed = 1.1;
   let maxZoom = 8;
@@ -1644,7 +1685,7 @@ function touchPinchMoved() {
   let zoomDiff = pTouchPinchDist - touchPinchDist;
   // zoomDiff = zoomDiff / zoomSpeed;
 
-  print('zoomDiff = ' + zoomDiff);
+  // print('zoomDiff = ' + zoomDiff);
 
   let zoomScale = 1;
   if (zoomDiff < 0) {
@@ -1653,8 +1694,19 @@ function touchPinchMoved() {
     zoomScale = 1/zoomSpeed;
   }
 
-  camera.zoom = constrain(camera.zoom * zoomScale, minZoom, maxZoom);
-  print('camera.zoom = ' + camera.zoom);
+
+  // loop through all players and change their scale.
+  // (we can't just change the camera.zoom because that won't change the
+  // colliders on the sprites)
+  for (var playerId in players) {
+    if (players.hasOwnProperty(playerId)) {
+      var p = players[playerId];
+      p.sprite.scale = constrain(p.sprite.scale * zoomScale, minZoom, maxZoom);
+    }
+  }
+
+  // camera.zoom = constrain(camera.zoom * zoomScale, minZoom, maxZoom);
+  // print('camera.zoom = ' + camera.zoom);
 
 }
 

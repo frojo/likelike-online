@@ -226,10 +226,6 @@ canvas {
 	color: black;
 }
 
-.color-picker {
-  height: 60px;
-  width: 60px;
-}
 
 /*Animate join to make sure people don't miss it*/
 @keyframes glowing {
@@ -252,6 +248,25 @@ canvas {
 #color-container {
 	display: block;
     height: 100%;
+}
+
+.color-picker-input {
+  height: 60px;
+  width: 100px;
+  appearance: none;
+
+  background-color: black;
+  border-color: white;
+
+  border-width: 1px;
+  border-image-width 0px;
+  border-style: solid;
+  padding: 0px;
+
+  /*
+  background-size: 0px 0px;
+   */
+
 }
 
 

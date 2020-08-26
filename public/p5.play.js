@@ -1169,6 +1169,8 @@ function Sprite(pInst, _x, _y, _w, _h) {
   */
   this.life = -1;
 
+  this.debug_frame = 0;
+
   /**
   * If set to true, draws an outline of the collider, the depth, and center.
   *
@@ -1324,11 +1326,15 @@ function Sprite(pInst, _x, _y, _w, _h) {
           }
         else if(this.colliderType === 'image')
           {
-          this.collider.extents.x = this._internalWidth * abs(cos(t)) +
-          this._internalHeight * abs(sin(t));
+          // this.collider.extents.x = this._internalWidth * abs(cos(t)) +
+          // this._internalHeight * abs(sin(t));
+          this.collider.extents.x = this._internalWidth * abs(this._getScaleX()) * abs(cos(t)) +
+          this._internalHeight * abs(this._getScaleY()) * abs(sin(t));
 
-          this.collider.extents.y = this._internalWidth * abs(sin(t)) +
-          this._internalHeight * abs(cos(t));
+          // this.collider.extents.y = this._internalWidth * abs(sin(t)) +
+          // this._internalHeight * abs(cos(t));
+          this.collider.extents.y = this._internalWidth * abs(this._getScaleX()) * abs(sin(t)) +
+          this._internalHeight * abs(this._getScaleY()) * abs(cos(t));
           }
         }
 
@@ -1369,6 +1375,8 @@ function Sprite(pInst, _x, _y, _w, _h) {
         }
       }
 
+      this.debug_frame++;
+
       //self destruction countdown
       if (this.life>0)
         this.life--;
@@ -1384,7 +1392,6 @@ function Sprite(pInst, _x, _y, _w, _h) {
    * @method setDefaultCollider
    */
   this.setDefaultCollider = function() {
-
     //if has animation get the animation bounding box
     //working only for preloaded images
     if(animations[currentAnimation] && (animations[currentAnimation].getWidth() !== 1 && animations[currentAnimation].getHeight() !== 1))
@@ -1432,6 +1439,8 @@ function Sprite(pInst, _x, _y, _w, _h) {
     else
       mousePosition = createVector(pInst.mouseX, pInst.mouseY);
 
+    // print('mousePos = (' + mousePosition.x + ', ' + mousePosition.y + ')');
+
       //rollover
       if(this.collider)
       {
@@ -1447,6 +1456,7 @@ function Sprite(pInst, _x, _y, _w, _h) {
               mousePosition.x < this.collider.right() &&
               mousePosition.y < this.collider.bottom())
           {
+	    // print('mouse is over this frame ' + this.debug_frame);
             this.mouseIsOver = true;
           }
         }
@@ -1462,11 +1472,12 @@ function Sprite(pInst, _x, _y, _w, _h) {
           else
             print('Warning: onMouseOver should be a function');
 
-        if(mouseWasOver && !this.mouseIsOver && this.onMouseOut !== undefined)
+        if(mouseWasOver && !this.mouseIsOver && this.onMouseOut !== undefined) {
           if(typeof(this.onMouseOut) === 'function')
             this.onMouseOut.call(this, this);
           else
             print('Warning: onMouseOut should be a function');
+	}
 
         if(!mouseWasPressed && this.mouseIsPressed && this.onMousePressed !== undefined)
           if(typeof(this.onMousePressed) === 'function')

@@ -25,7 +25,7 @@ If the VERSION vars are mismatched they will send all clients in an infinite ref
 */
 var VERSION = "1.0";
 
-var DEVMODE = false;
+var DEVMODE = true;
 
 //create a web application that uses the express frameworks and socket.io to communicate via http (the web protocol)
 var express = require('express');
