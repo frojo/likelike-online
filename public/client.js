@@ -254,8 +254,6 @@ var beGentleY = 0;
 // this is currently only used for detecting things for the "be gentle" label
 var lastRolledSprite = null;
 
-var gentleSlider;
-
 // timestamp for when we start a new game
 // used for tuning mouse temperature tenderness thresholds
 var newGameStarted = 0;
@@ -404,9 +402,6 @@ function setup() {
 
     //create a canvas
     canvas = createCanvas(WIDTH, HEIGHT);
-    
-    // debug
-    gentleSlider = createSlider(0, 255, 100);
 
     //accept only the clicks on the canvas (not the ones on the UI)
     canvas.mousePressed(canvasPressed);
@@ -489,8 +484,8 @@ function setupGame() {
 	background(PAGE_COLOR);
         showUser();
 
-        var field = document.getElementById("lobby-field");
-        field.focus();
+        // var field = document.getElementById("lobby-field");
+        // field.focus();
 
     }
     else {
@@ -513,6 +508,10 @@ function newGame() {
     hideUser();
     hideColor();
     hideAvatar();
+
+    if (nickName != "") {
+      fadeInfoToBlack();
+    }
 
     if (menuGroup != null)
         menuGroup.removeSprites();
@@ -800,7 +799,7 @@ function update() {
     // print('movedX = ' + movedX);
 
     if (screen == "user") {
-
+      // freeze for that charming jankiness
     }
     //renders the avatar selection screen which can be fully within the canvas
     else if (screen == "avatar") {
@@ -965,9 +964,6 @@ function update() {
 	noTint();
 	imageMode(CENTER);
 	image(borderMask, width/2, height/2);
-
-
-	gentleSlider.position(camera.x + 50, camera.y + 50);
 
 	camera.on();
 
@@ -1170,7 +1166,6 @@ function colorSelection() {
     colorPicker.parent('color-picker-container');
 
     // call setCurrentColor() every time user sets color with color picker
-    // todo
     colorPicker.input(setCurrentColor);
     setCurrentColor();
 }
@@ -1289,7 +1284,13 @@ function Player(p) {
         this.sprite.mouseActive = false;
     }
     else {
+      // todo
+      // this is where we create the colored spirte
 	this.avatarSprite = tintGraphics(avatarBaseSprite, this.color);
+
+
+
+	// saveCanvas(this.avatarSprite.canvas, 'favicon.ico');
     	this.sprite.addImage('default', this.avatarSprite);
         this.sprite.mouseActive = true;
     }
@@ -2088,6 +2089,9 @@ function joinGame() {
 
 function colorOk() {
 
+  // todo
+  // at this point, player has locked in their chosen color
+
     newGame();
 }
 
@@ -2154,6 +2158,18 @@ function showInfo() {
     var e = document.getElementById("info");
     if (e != null) {
         e.style.visibility = "visible";
+    }
+
+}
+
+//don't show the link while the canvas loads
+function fadeInfoToBlack() {
+
+    print('fadding to black!!!');
+
+    var e = document.getElementById("info-text");
+    if (e != null) {
+	e.className = 'info-text-black';
     }
 
 }

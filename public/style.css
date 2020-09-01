@@ -155,11 +155,14 @@ canvas {
 }
 
 #info {
-	visibility: hidden;
+/*
+	visibility: visible;
+*/
 }
 
 /*bottom link*/
 .info {
+	z-index: 2;
 	position: absolute;
 	right: 0px;
 	bottom: 0px;
@@ -170,34 +173,23 @@ canvas {
 	font-size: 16px;
 }
 
-.info a {
+.info-text-white {
 	text-decoration: none;
 	color: white;
 }
 
-.info a:hover {
+.info-text-black {
 	text-decoration: none;
-	color:#ff77a8;
+	transition: color 2s ease-in-out;
+	color: black;
+}
+
+.info-text-black:hover {
+	color: white;
 }
 
 
-/* On small screen stack the talk button */
-@media screen and (max-height: 450px) {
-  .talk-button {
-	  float: none;
-  }
-	.talk-field {
-		float: none;
-		width: 98%;
-		margin-bottom: 4px;
-	}
-
-	.info {
-		display: none;
-	}
-}
-
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 450px) {
 	.info {
 		display: none;
 	}
