@@ -306,6 +306,7 @@ function preload() {
     //packed with this tool  https://www.codeandweb.com/free-sprite-sheet-packer
     //layout horizontal, 0 padding (double check that)
 
+
     allSheets = loadImage(ASSETS_FOLDER + ALL_AVATARS_SHEET);
 
     avatarBaseSprite = loadImage(ASSETS_FOLDER + AVATAR_SPRITE_FILE);
@@ -385,23 +386,14 @@ function preload() {
 
     debugImg = loadImage(ASSETS_FOLDER + 'top-cabinet.png');
 
-    gifMethodDebug = 'native';
-
     // whiteNoiseAnim = createImg(ASSETS_FOLDER + 'white-noise1.gif');
-//     whiteNoiseAnim = new p5Gif.loadGif(ASSETS_FOLDER + 'white-noise1.gif',
-// 			  function () {
-// 			    whiteNoiseLoaded = true;
-// 			  });
+    whiteNoiseAnim = new p5Gif.loadGif(ASSETS_FOLDER + 'white-noise1.gif',
+			  function () {
+			    whiteNoiseLoaded = true;
+			  });
     
-//     whiteNoiseAnim = createImg(ASSETS_FOLDER + 'white-noise1.gif',
-// 			       'some white noise');
-    whiteNoiseAnim = loadGif(ASSETS_FOLDER + 'white-noise1.gif');
-    print('white noise anim loaded? ' + whiteNoiseAnim.loaded());
   
     borderMask = loadImage(ASSETS_FOLDER + 'fuzzy-border-mask.png');
-
-    print('finished preload');
-
 }
 
 
@@ -459,16 +451,11 @@ function setup() {
 
     //I can now open it
     socket.open();
-    print('finished setup');
 }
 
 
 function draw() {
-
-    // if (serverWelcomed && whiteNoiseLoaded && !gameStarted) {
-    if (serverWelcomed && whiteNoiseAnim.loaded() && !gameStarted) {
-    // if (serverWelcomed && !gameStarted) {
-	print('going to set up game');
+    if (serverWelcomed && whiteNoiseLoaded && !gameStarted) {
         setupGame();
     }
 
@@ -849,13 +836,10 @@ function update() {
 	// // yes, there's probably a better way to do this
 	tint(255, 44);
 	imageMode(CENTER);
-	// todo: need to fix the placement
-	image(whiteNoiseAnim, width / 2, height / 2, 
-	  whiteNoiseAnim.width, whiteNoiseAnim.height);
-	// image(whiteNoiseAnim._frames[whiteNoiseAnimIndex++], 
-	//   width / 2, height / 2, whiteNoiseAnim.width, whiteNoiseAnim.height);
-	// if (whiteNoiseAnimIndex >= whiteNoiseAnim._frames.length)
-        //         whiteNoiseAnimIndex = 0;
+	image(whiteNoiseAnim._frames[whiteNoiseAnimIndex++], 
+	  width / 2, height / 2, whiteNoiseAnim.width, whiteNoiseAnim.height);
+	if (whiteNoiseAnimIndex >= whiteNoiseAnim._frames.length)
+                whiteNoiseAnimIndex = 0;
 	noTint();
 
 	camera.on();
@@ -2180,6 +2164,9 @@ function showInfo() {
 
 //don't show the link while the canvas loads
 function fadeInfoToBlack() {
+
+    print('fadding to black!!!');
+
     var e = document.getElementById("info-text");
     if (e != null) {
 	e.className = 'info-text-black';
