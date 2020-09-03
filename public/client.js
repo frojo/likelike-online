@@ -40,15 +40,8 @@ var AVATAR_W = 16
 var AVATAR_H = 16;
 //number of avatars in the sheets
 var AVATARS = 1;
-//the big file if used
-var ALL_AVATARS_SHEET = "allAvatars.png";
 
-// 
 var AVATAR_SPRITE_FILE = "avatar-large.png";
-//the number of frames for walk cycle and emote animation
-//the first frame of emote is also the idle frame
-var WALK_F = 4;
-var EMOTE_F = 2;
 
 //the socket connection
 var socket;
@@ -93,45 +86,10 @@ var INSTA_GREY = '#FAFAFA';
 //hair, skin, shirt, pants
 var REF_COLORS = ['#413830', '#c0692a', '#ff004d', '#29adff'];
 //the palettes that will respectively replace the colors above
-var AVATAR_PALETTES = [
-    ['#ffa300', '#e27c32', '#a8e72e', '#00b543'],
-    ['#a8e72e', '#e27c32', '#111d35', '#8f3f17'],
-    ['#413830', '#e27c32', '#c2c3c7', '#a28879'],
-    ['#a28879', '#e27c32', '#f3ef7d', '#422136'],
-    ['#a28879', '#e27c32', '#ca466d', '#1e839d'],
-    ['#413830', '#e27c32', '#111d35', '#ca466d'],
-    ['#be1250', '#e27c32', '#ffec27', '#1e839d'],
-    ['#ffec27', '#e27c32', '#1e839d', '#422136'],
-
-    ['#413830', '#8f3f17', '#ff004d', '#413830'],
-    ['#413830', '#8f3f17', '#ff9d81', '#413830'],
-    ['#a28879', '#8f3f17', '#ffec27', '#ff6c24'],
-    ['#413830', '#8f3f17', '#c2c3c7', '#ca466d'],
-
-    ['#00b543', '#ffccaa', '#ff6c24', '#1e839d'],
-    ['#742f29', '#ffccaa', '#ffec27', '#ff6c24'],
-    ['#ff6c24', '#ffccaa', '#c2c3c7', '#413830'],
-    ['#413830', '#ffccaa', '#be1250', '#422136'],
-    ['#413830', '#ffccaa', '#ff6c24', '#8f3f17'],
-    ['#413830', '#ffccaa', '#ff6c24', '#8f3f17'],
-    ['#742f29', '#ffccaa', '#a8e72e', '#413830']
-
-];
-//arrays to speed up the pix by pix recoloring
-var REF_COLORS_RGB = [];
-var AVATAR_PALETTES_RGB = [];
 
 //GUI
 var LABEL_NEUTRAL_COLOR = "#FFFFFF";
 var UI_BG = "#000000";
-
-//global vars! I love global vars ///////////////////
-
-//preloaded images
-//these are arrays of p5.Images, where each image is a sprite sheet of an
-//an animation (walk or emote) for an avatar. index into them with avatar number
-var walkSheets = [];
-var emoteSheets = [];
 
 //the big spritesheet
 var allSheets;
@@ -285,113 +243,15 @@ Things are quite asynchronous here. This is the startup sequence:
 function preload() {
 
     document.body.style.backgroundColor = 'black';
-
-    //avatar spritesheets are programmatically tinted so they need to be pimages before being loaded as spritesheets
-
-    //METHOD 1:
-    //avatar spritesheets are numbered and sequential, one per animation like straight outta Piskel
-    //it's a lot of requests for a bunch of tiny images
-    /*
-    for (var i = 0; i < AVATARS; i++) {
-        walkSheets[i] = loadImage(ASSETS_FOLDER + "character" + i + ".png");
-    }
-
-    for (var i = 0; i < AVATARS; i++) {
-        emoteSheets[i] = loadImage(ASSETS_FOLDER + "character" + i + "-emote.png");
-    }
-    */
-
-    //METHOD 2:
-    //all spritesheets are packed in one long file, preloaded and split on setup
-    //packed with this tool  https://www.codeandweb.com/free-sprite-sheet-packer
-    //layout horizontal, 0 padding (double check that)
-
-
-    allSheets = loadImage(ASSETS_FOLDER + ALL_AVATARS_SHEET);
-
     avatarBaseSprite = loadImage(ASSETS_FOLDER + AVATAR_SPRITE_FILE);
 
-    REF_COLORS_RGB = [];
-    //to make the palette swap faster I save colors as arrays 
-    for (var i = 0; i < REF_COLORS.length; i++) {
-        var rc = REF_COLORS[i];
-        var r = red(rc);
-        var g = green(rc);
-        var b = blue(rc);
-        REF_COLORS_RGB[i] = [r, g, b];
-    }
-
-    AVATAR_PALETTES_RGB = [];
-    //to make the palette swap faster I save colors as arrays 
-    // this converts from an array of arrays of (hex) strings to 
-    // an array of array of numbers? 
-    for (var i = 0; i < AVATAR_PALETTES.length; i++) {
-
-        AVATAR_PALETTES_RGB[i] = [];
-
-        //each color
-        for (var j = 0; j < AVATAR_PALETTES[i].length; j++) {
-
-            var rc = AVATAR_PALETTES[i][j];
-            var r = red(rc);
-            var g = green(rc);
-            var b = blue(rc);
-            AVATAR_PALETTES_RGB[i][j] = [r, g, b];
-        }
-    }
-
-    menuBg = loadImage(ASSETS_FOLDER + MENU_BG_FILE);
-    arrowButton = loadImage(ASSETS_FOLDER + "arrowButton.png");
-
-    // TODO: change logo (active now?)
-    var logoSheet = loadSpriteSheet(ASSETS_FOLDER + LOGO_FILE, 66, 82, 4);
-    logo = loadAnimation(logoSheet);
-    logo.frameDelay = 10;
-
-    var walkIconSheet = loadSpriteSheet(ASSETS_FOLDER + "walkIcon.png", 6, 8, 4);
-    walkIcon = loadAnimation(walkIconSheet);
-    walkIcon.frameDelay = 8;
-
-    var appearEffectSheet = loadSpriteSheet(ASSETS_FOLDER + "appearEffect.png", 10, 18, 10);
-    appearEffect = loadAnimation(appearEffectSheet);
-    appearEffect.frameDelay = 4;
-    appearEffect.looping = false;
-
-    var disappearEffectSheet = loadSpriteSheet(ASSETS_FOLDER + "disappearEffect.png", 10, 18, 10);
-    disappearEffect = loadAnimation(disappearEffectSheet);
-    //disappearEffect.frameDelay = 4;
-    disappearEffect.looping = false;
-
-    // font = loadFont(FONT_FILE);
     font = 'Helvetica';
-
-    //load sound
-    soundFormats('mp3', 'ogg');
-
-    blips = [];
-    for (var i = 0; i <= 5; i++) {
-        var blip = loadSound(ASSETS_FOLDER + "blip" + i);
-        blip.playMode('sustain');
-        blip.setVolume(0.3);
-        blips.push(blip);
-    }
-
-    appearSound = loadSound(ASSETS_FOLDER + "appear");
-    appearSound.playMode('sustain');
-    appearSound.setVolume(0.3);
-
-    disappearSound = loadSound(ASSETS_FOLDER + "disappear");
-    disappearSound.playMode('sustain');
-    disappearSound.setVolume(0.3);
-
-    debugImg = loadImage(ASSETS_FOLDER + 'top-cabinet.png');
 
     // whiteNoiseAnim = createImg(ASSETS_FOLDER + 'white-noise1.gif');
     whiteNoiseAnim = new p5Gif.loadGif(ASSETS_FOLDER + 'white-noise1.gif',
 			  function () {
 			    whiteNoiseLoaded = true;
 			  });
-    
   
     borderMask = loadImage(ASSETS_FOLDER + 'fuzzy-border-mask.png');
 }
@@ -412,9 +272,6 @@ function setup() {
 
     //adapt it to the browser window 
     scaleCanvas();
-
-    //since my avatars are pixelated and scaled I kill the antialiasing on canvas
-    // noSmooth();
 
     //the page link below
     showInfo();
@@ -474,8 +331,6 @@ function setupGame() {
     if (QUICK_LOGIN) {
         //assign random name and avatar and get to the game
         nickName = "user" + floor(random(0, 1000));
-        currentColor = floor(random(0, AVATAR_PALETTES.length));
-        currentAvatar = floor(random(0, walkSheets.length));
         newGame();
     }
     else if (!LURK_MODE) {
@@ -483,9 +338,6 @@ function setupGame() {
         //paint background
 	background(PAGE_COLOR);
         showUser();
-
-        // var field = document.getElementById("lobby-field");
-        // field.focus();
 
     }
     else {
@@ -1174,96 +1026,6 @@ function setCurrentColor() {
   // .value() returns a color string
   currentColor = colorPicker.value();
 }
-    
-
-//I could do this in DOM (regular html and javascript elements) 
-//but I want to show a canvas with html overlay
-function avatarSelection() {
-    menuGroup = new Group();
-    screen = "avatar";
-
-    //buttons
-    var previousBody, nextBody, previousColor, nextColor;
-
-    var ss = loadSpriteSheet(arrowButton, 28, 28, 3);
-    var animation = loadAnimation(ss);
-
-    //the position is the bottom left
-    previousBody = createSprite(8 * ASSET_SCALE + 14, 50 * ASSET_SCALE + 14);
-    previousBody.addAnimation("default", animation);
-    previousBody.animation.stop();
-    previousBody.mirrorX(-1);
-    menuGroup.add(previousBody);
-
-    nextBody = createSprite(24 * ASSET_SCALE + 14, 50 * ASSET_SCALE + 14);
-    nextBody.addAnimation("default", animation);
-    nextBody.animation.stop();
-    menuGroup.add(nextBody);
-
-    previousColor = createSprite(90 * ASSET_SCALE + 14, 50 * ASSET_SCALE + 14);
-    previousColor.addAnimation("default", animation);
-    previousColor.animation.stop();
-    previousColor.mirrorX(-1);
-    menuGroup.add(previousColor);
-
-    nextColor = createSprite(106 * ASSET_SCALE + 14, 50 * ASSET_SCALE + 14);
-    nextColor.addAnimation("default", animation);
-    nextColor.animation.stop();
-    menuGroup.add(nextColor);
-
-    previousBody.onMouseOver = nextBody.onMouseOver = previousColor.onMouseOver = nextColor.onMouseOver = function () {
-        this.animation.changeFrame(1);
-    }
-    previousBody.onMouseOut = nextBody.onMouseOut = previousColor.onMouseOut = nextColor.onMouseOut = function () {
-        this.animation.changeFrame(0);
-    }
-
-    previousBody.onMousePressed = nextBody.onMousePressed = previousColor.onMousePressed = nextColor.onMousePressed = function () {
-        this.animation.changeFrame(2);
-    }
-
-    previousBody.onMouseReleased = function () {
-        currentAvatar -= 1;
-        if (currentAvatar < 0)
-            currentAvatar = AVATARS - 1;
-
-        previewAvatar();
-        this.animation.changeFrame(1);
-    }
-
-    nextBody.onMouseReleased = function () {
-        currentAvatar += 1;
-        if (currentAvatar >= AVATARS)
-            currentAvatar = 0;
-
-        previewAvatar();
-        this.animation.changeFrame(1);
-    }
-
-    previousColor.onMouseReleased = function () {
-        currentColor -= 1;
-        if (currentColor < 0)
-            currentColor = AVATAR_PALETTES.length - 1;
-
-        previewAvatar();
-        this.animation.changeFrame(1);
-    }
-
-    nextColor.onMouseReleased = function () {
-        currentColor += 1;
-        if (currentColor >= AVATAR_PALETTES.length)
-            currentColor = 0;
-
-        previewAvatar();
-        this.animation.changeFrame(1);
-    }
-
-    //nextBody.onMouseReleased = previousColor.onMouseReleased = nextColor.onMouseReleased = function () {
-
-    randomAvatar();
-}
-
-
 
 //copy the properties
 function Player(p) {
@@ -1287,8 +1049,6 @@ function Player(p) {
       // todo
       // this is where we create the colored spirte
 	this.avatarSprite = tintGraphics(avatarBaseSprite, this.color);
-
-
 
 	// saveCanvas(this.avatarSprite.canvas, 'favicon.ico');
     	this.sprite.addImage('default', this.avatarSprite);
@@ -1995,66 +1755,6 @@ function nameValidationCallBack(code) {
     }
 }
 
-//draws a random avatar body in the center of the canvas
-//colors it a random color
-function randomAvatar() {
-    currentColor = floor(random(0, AVATAR_PALETTES.length));
-    currentAvatar = floor(random(0, AVATARS));
-    previewAvatar();
-}
-
-function previewAvatar() {
-
-    if (avatarPreview != null)
-        removeSprite(avatarPreview);
-
-    var aGraphics = paletteSwap(emoteSheets[currentAvatar], AVATAR_PALETTES_RGB[currentColor]);
-    var aSS = loadSpriteSheet(aGraphics, AVATAR_W, AVATAR_H, round(emoteSheets[currentAvatar].width / AVATAR_W));
-    var aAnim = loadAnimation(aSS);
-    avatarPreview = createSprite(width / 2, height / 2);
-    avatarPreview.scale = 4;
-    avatarPreview.addAnimation("default", aAnim);
-    avatarPreview.animation.frameDelay = 10;
-    //avatarPreview.debug = true;
-    //avatarPreview.animation.stop();
-    menuGroup.add(avatarPreview);
-}
-
-// returns a p5.Image
-function paletteSwap(ss, palette, t) {
-
-    var tint = [255, 255, 255];
-
-    if (t != null)
-        tint = [red(t), green(t), blue(t)];
-
-    var img = createImage(ss.width, ss.height);
-    img.copy(ss, 0, 0, ss.width, ss.height, 0, 0, ss.width, ss.height);
-    img.loadPixels();
-
-    for (var i = 0; i < img.pixels.length; i += 4) {
-
-        if (img.pixels[i + 3] == 255) {
-            var found = false;
-
-            //non transparent pix replace with palette
-            for (var j = 0; j < REF_COLORS_RGB.length && !found; j++) {
-
-                if (img.pixels[i] == REF_COLORS_RGB[j][0] && img.pixels[i + 1] == REF_COLORS_RGB[j][1] && img.pixels[i + 2] == REF_COLORS_RGB[j][2]) {
-                    found = true;
-                    img.pixels[i] = palette[j][0] * tint[0] / 255;
-                    img.pixels[i + 1] = palette[j][1] * tint[1] / 255;
-                    img.pixels[i + 2] = palette[j][2] * tint[2] / 255;
-                }
-
-            }
-        }
-    }
-    img.updatePixels();
-
-    return img;
-}
-
 function tintGraphics(img, colorString) {
 
     var c = color(colorString);
@@ -2076,8 +1776,6 @@ function joinGame() {
     if (QUICK_LOGIN) {
         //assign random name and avatar and get to the game
         nickName = "user" + floor(random(0, 1000));
-        currentColor = floor(random(0, AVATAR_PALETTES.length));
-        currentAvatar = floor(random(0, emoteSheets.length));
         newGame();
     }
     else {
