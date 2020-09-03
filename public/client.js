@@ -170,9 +170,6 @@ var screen;
 //set the time at the beginning of the computing era, the SEVENTIES!
 var lastMessage = 0;
 
-//sparkles p5 play animations
-var appearEffect, disappearEffect;
-
 //sounds
 var blips;
 var appearSound, disappearSound;
@@ -359,7 +356,6 @@ function newGame() {
 
     hideUser();
     hideColor();
-    hideAvatar();
 
     if (nickName != "") {
       fadeInfoToBlack();
@@ -410,8 +406,6 @@ function newGame() {
                 socket.disconnect();
             }
 
-
-            bubbles = [];
 
             //first time
             if (me == null) {
@@ -557,7 +551,6 @@ function newGame() {
                 errorMessage = msg;
                 hideUser();
                 hideColor();
-		hideAvatar();
             }
         }
     );
@@ -1065,9 +1058,6 @@ function Player(p) {
     // for the label that is being hovered over currently
     this.labelOpacityPct = 0;
 
-    //save the dominant color for bubbles and rollover label
-    // var c = color(this.color)
-
     // if (brightness(c) > 30)
     //     this.sprite.labelColor = color(this.color)
     // else
@@ -1137,6 +1127,8 @@ function Player(p) {
 	    if (lastRolledSprite != rolledSprite) {
 	      beGentleLabelOpacityPct = 0;
 	    }
+
+	    // a little hand for rubbing
 	    cursor('grab');
         };
 
@@ -1145,7 +1137,6 @@ function Player(p) {
 		lastRolledSprite = rolledSprite;
                 rolledSprite = null;
 	    }
-	    // cursor(ARROW);
 	    cursor();
         };
 
@@ -1153,6 +1144,7 @@ function Player(p) {
 
         };
     }
+
     //ugly as fuck but javascript made me do it
     this.sprite.originalDraw = this.sprite.draw;
     this.sprite.draw = function () {
@@ -1282,7 +1274,6 @@ function getUpperTempThreshold() {
 function deleteAllSprites() {
     allSprites.removeSprites();
 }
-
 
 //on mobile there is no rollover so allow a drag to count as mouse move
 //the two functions SHOULD be mutually exclusive (but i think aren't)
@@ -1444,9 +1435,6 @@ function touchPinchMoved() {
 
   let touchPinchDist = calcDist(touches[0], touches[1]);
   let zoomDiff = pTouchPinchDist - touchPinchDist;
-  // zoomDiff = zoomDiff / zoomSpeed;
-
-  // print('zoomDiff = ' + zoomDiff);
 
   let zoomScale = 1;
   if (zoomDiff < 0) {
@@ -1465,10 +1453,6 @@ function touchPinchMoved() {
       p.sprite.scale = constrain(p.sprite.scale * zoomScale, minZoom, maxZoom);
     }
   }
-
-  // camera.zoom = constrain(camera.zoom * zoomScale, minZoom, maxZoom);
-  // print('camera.zoom = ' + camera.zoom);
-
 }
 
 function touchPanStart() {
@@ -1533,174 +1517,8 @@ function canvasReleased() {
       // we're lurking and we click on screen, so go to prompt for user
       joinGame();
     }
-    else if (nickName != "" && screen == "game" && mouseButton == RIGHT) {
-        if (me.destinationX == me.x && me.destinationY == me.y) {
-	}
-	    // do something if we click with rmb?
-            // socket.emit('emote', { room: me.room, em: false });
-    }
-    else if (nickName != "" && screen == "game" && mouseButton == LEFT) {
-        //exit text
-        if (longText != "" && longText != SETTINGS.INTRO_TEXT) {
-
-            if (longTextLink != "")
-                window.open(longTextLink, '_blank');
-
-            longText = "";
-            longTextLink = "";
-        }
-        else if (me != null) {
-
-            longText = "";
-            longTextLink = "";
-
-            if (AFK) {
-                AFK = false;
-                if (socket != null)
-                    socket.emit('focus', {});
-            }
-
-            //clicked on person
-            if (rolledSprite != null) {
-
-                //click on player sprite attempt to move next to them
-                if (rolledSprite.id != null) {
-                    nextCommand = null;
-                    var t = players[rolledSprite.id];
-                    if (t != null && t != me) {
-		      // what if we clicked on someone else?
-                    }
-                }
-            }
-            //check the area info
-            else if (areas != null) {
-
-                //you know, at this point I'm not sure if you are using assets scaled by 2 for the areas
-                //so I'm just gonna stretch the coordinates ok
-                var mx = floor(map(mouseX, 0, WIDTH, 0, areas.width));
-                var my = floor(map(mouseY, 0, HEIGHT, 0, areas.height));
-
-                var c = areas.get(mx, my);
-
-                //if transparent or semitransparent do nothing
-                if (alpha(c) != 255) {
-                    //cancel command
-                    nextCommand = null;
-                    //stop if moving
-                    if (me.x != me.destinationX && me.y != me.destinationY) {
-		    }
-                        // socket.emit('move', { x: me.x, y: me.y, room: me.room, destinationX: me.x, destinationY: me.y });
-                }
-                else if (c[0] == 255 && c[1] == 255 && c[2] == 255) {
-                    //if white, generic walk stop command
-                    nextCommand = null;
-
-                    // socket.emit('move', { x: me.x, y: me.y, destinationX: mouseX, destinationY: mouseY });
-                }
-                else {
-                    //if something else check the commands
-                    var command = getCommand(c);
-
-                    //walk and executed when you arrive or stop
-                    if (command != null)
-                        moveToCommand(command);
-                }
-            }
-
-
-        }
-    }
-
 }
 
-//queue a command, move to the point
-function moveToCommand(command) {
-
-    nextCommand = command;
-
-    //I need to change my destination locally before the message bouces back
-
-    if (command.point != null) {
-        me.destinationX = command.point[0] * ASSET_SCALE;
-        me.destinationY = command.point[1] * ASSET_SCALE;
-        socket.emit('move', { x: me.x, y: me.y, destinationX: command.point[0] * ASSET_SCALE, destinationY: command.point[1] * ASSET_SCALE });
-    }
-    else //just move where you clicked (area) 
-    {
-        me.destinationX = mouseX;
-        me.destinationY = mouseY;
-        socket.emit('move', { x: me.x, y: me.y, destinationX: mouseX, destinationY: mouseY });
-    }
-
-}
-
-function getCommand(c) {
-    try {
-        //turn color into string
-        var cString = color(c).toString('#rrggbb');//for com
-
-        var command;
-
-        //go through properties
-        for (var colorId in areaColors) {
-
-            if (areaColors.hasOwnProperty(colorId)) {
-                var aString = "#" + colorId.substr(1);
-
-                if (aString == cString) {
-                    //color found
-                    command = areaColors[colorId];
-
-                }
-            }
-        }
-    }
-    catch (e) {
-        console.log("Get command error: color " + c);
-        console.error(e);
-    }
-
-    return command;
-}
-
-
-function executeCommand(c) {
-    areaLabel = "";
-
-    switch (c.cmd) {
-        case "enter":
-            var sx, sy;
-            break;
-
-
-        case "text":
-            if (c.txt != null) {
-
-                longText = c.txt;
-                if (c.lines != null)
-                    longTextLines = c.lines;
-                else
-                    longTextLines = 1;
-
-                if (c.align != null)
-                    longTextAlign = c.align;
-                else
-                    longTextAlign = "center";//or center
-
-                if (c.url == null)
-                    longTextLink = "";
-                else
-                    longTextLink = c.url;
-
-            }
-            else
-                print("Warning for text: make sure to specify arg as text")
-            break;
-
-
-    }
-
-}
 
 function keyPressed() {
     if (screen == "user") {
@@ -1841,15 +1659,6 @@ function hideColor() {
         e.style.display = "none";
 }
 
-
-// shows the "continue" button right before entering
-function showAvatar() {
-    var e = document.getElementById("avatar-form");
-    if (e != null) {
-        e.style.display = "block";
-    }
-}
-
 //don't show the link while the canvas loads
 function showInfo() {
 
@@ -1870,13 +1679,6 @@ function fadeInfoToBlack() {
 	e.className = 'info-text-black';
     }
 
-}
-
-function hideAvatar() {
-
-    var e = document.getElementById("avatar-form");
-    if (e != null)
-        e.style.display = "none";
 }
 
 function outOfCanvas() {
