@@ -76,18 +76,35 @@ canvas {
 
 /*TEXT FIELDS*/
 .talk-field,
-.lobby-field {
+.lobby-field,
+.color-picker-input {
 	font-family: system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 	border: 1px solid white;
-	padding-top: 10px;
-	padding-bottom: 10px;
-	padding-left: 4px;
+	padding: 7px;
 	outline: none;
     font-size: 32px;
     background-color: black;
     color: white;
     text-align: center;
+    height: 38px;
 }
+
+/* 
+.color-picker-input {
+  height: 60px;
+  width: 100px;
+  appearance: none;
+
+  background-color: black;
+  border-color: white;
+
+  border-width: 1px;
+  border-image-width 0px;
+  border-style: solid;
+  padding: 0px;
+
+}
+*/
 
 .talk-field {
 	display: inline-block;
@@ -241,27 +258,6 @@ canvas {
 	display: block;
     height: 100%;
 }
-
-.color-picker-input {
-  height: 60px;
-  width: 100px;
-  appearance: none;
-
-  background-color: black;
-  border-color: white;
-
-  border-width: 1px;
-  border-image-width 0px;
-  border-style: solid;
-  padding: 0px;
-
-  /*
-  background-size: 0px 0px;
-   */
-
-}
-
-
 
 /* center on container */
 .content-center {
